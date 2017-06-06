@@ -43,13 +43,4 @@ FOR EACH STATEMENT EXECUTE PROCEDURE _timescaledb_cache.invalidate_relcache_trig
 CREATE TRIGGER "0_cache_inval" AFTER UPDATE OR DELETE OR TRUNCATE ON _timescaledb_catalog.chunk
 FOR EACH STATEMENT EXECUTE PROCEDURE _timescaledb_cache.invalidate_relcache_trigger('cache_inval_chunk');
 
--- This function detects whether a CREATE EXTENSION or DROP EXTENSION is called
--- on this extension and takes the appropriate action.
-CREATE OR REPLACE FUNCTION _timescaledb_cache.extension_event_trigger()
-RETURNS EVENT_TRIGGER AS '$libdir/timescaledb', 'extension_event_trigger' LANGUAGE C;
 
-CREATE EVENT TRIGGER "0_extension_create" ON ddl_command_end WHEN TAG IN ('CREATE EXTENSION')
-EXECUTE PROCEDURE _timescaledb_cache.extension_event_trigger();
-
-CREATE EVENT TRIGGER "0_extension_drop" ON ddl_command_start WHEN TAG IN ('DROP EXTENSION')
-EXECUTE PROCEDURE _timescaledb_cache.extension_event_trigger();
