@@ -35,6 +35,7 @@ typedef struct Dimension
 #define MAX_TIME_DIMENSIONS 1
 #define MAX_SPACE_DIMENSIONS 1
 #define MAX_DIMENSIONS (MAX_TIME_DIMENSIONS + MAX_SPACE_DIMENSIONS)
+
 /*
  * Hyperspace defines the current partitioning in a N-dimensional space.
  */
