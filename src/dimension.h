@@ -7,9 +7,16 @@
 
 typedef struct PartitioningInfo PartitioningInfo;
 
+typedef enum DimensionType
+{
+	DIMENSION_TYPE_TIME,
+	DIMENSION_TYPE_SPACE,
+} DimensionType;
+	
 typedef struct Dimension
 {
 	FormData_dimension fd;
+	DimensionType type;
 	/* num_slices is the number of slices in the cached Dimension for a
 	 * particular time interval, which might differ from the num_slices in the
 	 * FormData in case partitioning has changed. */
@@ -17,10 +24,17 @@ typedef struct Dimension
 	PartitioningInfo *partitioning;
 } Dimension;
 
+
+#define IS_TIME_DIMENSION(d) \
+	((d)->type == DIMENSION_TYPE_TIME)
+
+#define IS_SPACE_DIMENSION(d) \
+	((d)->type == DIMENSION_TYPE_SPACE)
+
 /* We currently support only one time dimension and one space dimension */
 #define MAX_TIME_DIMENSIONS 1
 #define MAX_SPACE_DIMENSIONS 1
-
+#define MAX_DIMENSIONS (MAX_TIME_DIMENSIONS + MAX_SPACE_DIMENSIONS)
 /*
  * Hyperspace defines the current partitioning in a N-dimensional space.
  */
@@ -28,17 +42,17 @@ typedef struct Hyperspace
 {
 	int16 num_time_dimensions;
 	int16 num_space_dimensions;
-	Dimension *time_dimensions[MAX_TIME_DIMENSIONS];
-	Dimension *space_dimensions[MAX_SPACE_DIMENSIONS];
+	union {
+		struct {
+			Dimension *time_dimensions[MAX_TIME_DIMENSIONS];
+			Dimension *space_dimensions[MAX_SPACE_DIMENSIONS];
+		};
+		Dimension *dimensions[MAX_DIMENSIONS];
+	};
 } Hyperspace;
 
-typedef struct DimensionSlice
-{
-	int32 id;
-	int32 dimension_id;
-	int64 range_start;
-	int64 range_end;
-} DimensionSlice;
+#define HYPERSPACE_NUM_DIMENSIONS(hs) \
+	((hs)->num_time_dimensions + (hs)->num_space_dimensions)
 
 extern Hyperspace *dimension_scan(int32 hypertable_id);
 

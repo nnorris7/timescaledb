@@ -28,6 +28,7 @@ SRCS = \
 	src/hypertable_cache.c \
 	src/hypertable.c \
 	src/dimension.c \
+	src/dimension_slice.c \
 	src/chunk_cache.c \
 	src/partitioning.c \
 	src/insert.c \

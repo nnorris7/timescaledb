@@ -6,18 +6,18 @@
 #include "hypertable.h"
 #include "scanner.h"
 
-#define IS_TIME_DIMENSION(d) \
-	OidIsValid((d)->fd.time_type)
-
-#define IS_SPACE_DIMENSION(d) \
-	!IS_TIME_DIMENSION(d)
-
 static Dimension *
 dimension_from_tuple(HeapTuple tuple)
 {
 	Dimension *d;
 	d = palloc0(sizeof(Dimension));
-	memcpy(&d->fd, GETSTRUCT(tuple), sizeof(FormData_dimension));   
+	memcpy(&d->fd, GETSTRUCT(tuple), sizeof(FormData_dimension));
+
+	if (OidIsValid((d)->fd.time_type))
+		d->type = DIMENSION_TYPE_TIME;
+	else
+		d->type = DIMENSION_TYPE_SPACE;
+	
 	return d;
 }
 

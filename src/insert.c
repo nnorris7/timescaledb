@@ -120,9 +120,6 @@ insert_main_table_trigger(PG_FUNCTION_ARGS)
 
 		timepoint = time_value_to_internal(datum, time_dim->fd.time_type);
 
-		//epoch = hypertable_cache_get_partition_epoch(insert_statement_state->hypertable_cache, insert_statement_state->hypertable,
-		//timepoint, relid);
-
 		space_dim = hypertable_space_dimension(insert_statement_state->hypertable);
 		
 		/* Find correct partition */
