@@ -63,7 +63,7 @@ hypertable_cache_create()
 		.get_key = hypertable_cache_get_key,
 		.create_entry = hypertable_cache_create_entry,
 	};
-
+	
 	*cache = template;
 
 	cache_init(cache);
@@ -90,6 +90,7 @@ hypertable_cache_create_entry(Cache *cache, CacheQuery *query)
 	HypertableCacheQuery *hq = (HypertableCacheQuery *) query;
 	Catalog    *catalog = catalog_get();
 	HypertableNameCacheEntry *cache_entry = query->result;
+	Hypertable *ht;
 	int			number_found;
 	ScanKeyData scankey[2];
 	ScannerCtx	scanCtx = {
@@ -137,6 +138,10 @@ hypertable_cache_create_entry(Cache *cache, CacheQuery *query)
 			break;
 
 	}
+
+	ht = cache_entry->hypertable;   
+	ht->space = dimension_scan(ht->fd.id);
+	
 	return query->result;
 }
 

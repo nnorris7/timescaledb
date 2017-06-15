@@ -1,8 +1,16 @@
 #include <postgres.h>
 #include <access/relscan.h>
 
+#include "catalog.h"
 #include "dimension.h"
+#include "hypertable.h"
 #include "scanner.h"
+
+#define IS_TIME_DIMENSION(d) \
+	OidIsValid((d)->fd.time_type)
+
+#define IS_SPACE_DIMENSION(d) \
+	!IS_TIME_DIMENSION(d)
 
 static Dimension *
 dimension_from_tuple(HeapTuple tuple)
@@ -16,56 +24,45 @@ dimension_from_tuple(HeapTuple tuple)
 static bool
 dimension_tuple_found(TupleInfo *ti, void *data)
 {
-	Dimension **h = data;
-	*h = dimension_from_tuple(ti->tuple);
-	return false;
+	Hyperspace *s = data;
+	Dimension *d = dimension_from_tuple(ti->tuple);
+
+	if (IS_TIME_DIMENSION(d))
+		s->time_dimensions[s->num_time_dimensions++] = d;
+	else
+	   	s->space_dimensions[s->num_space_dimensions++] = d;
+	
+	return true;
 }
 
-#if 0
-static void *
-dimension_table_scan(Cache *cache, CacheQuery *query)
+Hyperspace *
+dimension_scan(int32 hypertable_id)
 {
-	HypertableCacheQuery *hq = (HypertableCacheQuery *) query;
 	Catalog    *catalog = catalog_get();
-	HypertableNameCacheEntry *cache_entry = query->result;
-	int			number_found;
-	ScanKeyData scankey[2];
+	Hyperspace *space = palloc0(sizeof(Hyperspace));
+	ScanKeyData scankey[1];   
 	ScannerCtx	scanCtx = {
-		.table = catalog->tables[HYPERTABLE].id,
-		.index = catalog->tables[HYPERTABLE].index_ids[HYPERTABLE_NAME_INDEX],
+		.table = catalog->tables[DIMENSION].id,
+		.index = catalog->tables[DIMENSION].index_ids[DIMENSION_HYPERTABLE_ID_IDX],
 		.scantype = ScannerTypeIndex,
-		.nkeys = 2,
+		.nkeys = 1,
 		.scankey = scankey,
-		.data = query->result,
-		.tuple_found = hypertable_tuple_found,
+		.data = space,
+		.tuple_found = dimension_tuple_found,
 		.lockmode = AccessShareLock,
 		.scandirection = ForwardScanDirection,
 	};
 
+	space->num_space_dimensions = space->num_space_dimensions = 0;
+	
 	/* Perform an index scan on schema and table. */
 	ScanKeyInit(&scankey[0], Anum_dimension_hypertable_id_idx_hypertable_id,
-				BTEqualStrategyNumber, F_INT4EQ, );
+				BTEqualStrategyNumber, F_INT4EQ, Int32GetDatum(hypertable_id));
 
-	number_found = scanner_scan(&scanCtx);
+	scanner_scan(&scanCtx);
 
-	switch (number_found)
-	{
-		case 0:
-			/* Negative cache entry: table is not a hypertable */
-			cache_entry->hypertable = NULL;
-			break;
-		case 1:
-			Assert(strncmp(cache_entry->hypertable->fd.schema_name, hq->schema, NAMEDATALEN) == 0);
-			Assert(strncmp(cache_entry->hypertable->fd.table_name, hq->table, NAMEDATALEN) == 0);
-			break;
-		default:
-			elog(ERROR, "Got an unexpected number of records: %d", number_found);
-			break;
-
-	}
-	return query->result;
+	return space;
 }
-#endif
 
 #if defined(__MAIN__)
 #include <stdio.h>

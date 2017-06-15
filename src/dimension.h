@@ -17,6 +17,21 @@ typedef struct Dimension
 	PartitioningInfo *partitioning;
 } Dimension;
 
+/* We currently support only one time dimension and one space dimension */
+#define MAX_TIME_DIMENSIONS 1
+#define MAX_SPACE_DIMENSIONS 1
+
+/*
+ * Hyperspace defines the current partitioning in a N-dimensional space.
+ */
+typedef struct Hyperspace
+{
+	int16 num_time_dimensions;
+	int16 num_space_dimensions;
+	Dimension *time_dimensions[MAX_TIME_DIMENSIONS];
+	Dimension *space_dimensions[MAX_SPACE_DIMENSIONS];
+} Hyperspace;
+
 typedef struct DimensionSlice
 {
 	int32 id;
@@ -24,5 +39,7 @@ typedef struct DimensionSlice
 	int64 range_start;
 	int64 range_end;
 } DimensionSlice;
+
+extern Hyperspace *dimension_scan(int32 hypertable_id);
 
 #endif /* TIMESCALEDB_DIMENSION_H */
