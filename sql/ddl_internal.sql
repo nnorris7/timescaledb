@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION _timescaledb_internal.create_hypertable_row(
     time_column_name        NAME,
     time_column_type        REGTYPE,
     partitioning_column     NAME,
-    partitioning_column_type NAME,
+    partitioning_column_type REGTYPE,
     number_partitions       INTEGER,
     associated_schema_name  NAME,
     associated_table_prefix NAME,
@@ -52,20 +52,16 @@ BEGIN
 
     INSERT INTO _timescaledb_catalog.hypertable (
         id, schema_name, table_name,
-        associated_schema_name, associated_table_prefix,
-        chunk_time_interval,
-        time_column_name, time_column_type)
+        associated_schema_name, associated_table_prefix)
     VALUES (
         id, schema_name, table_name,
-        associated_schema_name, associated_table_prefix,
-        chunk_time_interval,
-        time_column_name, time_column_type
-      )
+        associated_schema_name, associated_table_prefix
+    )
     RETURNING * INTO hypertable_row;
 
     --create time dimension
     INSERT INTO _timescaledb_catalog.dimension(hypertable_id, column_name, column_type,
-        num_slice, partitioning_func_schema, partitioning_func, 
+        num_slices, partitioning_func_schema, partitioning_func, 
         interval_length
     ) VALUES (
         hypertable_row.id, time_column_name, time_column_type,
@@ -76,7 +72,7 @@ BEGIN
     IF partitioning_column IS NOT NULL THEN 
         --create space dimension
         INSERT INTO _timescaledb_catalog.dimension(hypertable_id, column_name, column_type,
-            num_slice, partitioning_func_schema, partitioning_func, 
+            num_slices, partitioning_func_schema, partitioning_func, 
             interval_length
         ) VALUES (
             hypertable_row.id, partitioning_column, partitioning_column_type,
@@ -234,17 +230,22 @@ CREATE OR REPLACE FUNCTION _timescaledb_internal.create_default_indexes(
 $BODY$
 DECLARE
     index_count INTEGER;
+    time_dimension_row _timescaledb_catalog.dimension;
 BEGIN
+    SELECT * INTO STRICT time_dimension_row
+    FROM _timescaledb_catalog.dimension
+    WHERE hypertable_id = hypertable_row.id AND partitioning_func IS NULL;
+
     SELECT count(*) INTO index_count
     FROM pg_index
     WHERE indkey = (
         SELECT attnum::text::int2vector
-        FROM pg_attribute WHERE attrelid = main_table AND attname=hypertable_row.time_column_name
+        FROM pg_attribute WHERE attrelid = main_table AND attname=time_dimension_row.column_name
     ) AND indrelid = main_table;
 
     IF index_count = 0 THEN
         EXECUTE format($$ CREATE INDEX ON %I.%I(%I DESC) $$,
-            hypertable_row.schema_name, hypertable_row.table_name, hypertable_row.time_column_name);
+            hypertable_row.schema_name, hypertable_row.table_name, time_dimension_row.column_name);
     END IF;
 
     IF partitioning_column IS NOT NULL THEN
@@ -256,14 +257,14 @@ BEGIN
                 FROM pg_attribute WHERE attrelid = main_table AND attname=partitioning_column
                 UNION ALL
                 SELECT attnum::text
-                FROM pg_attribute WHERE attrelid = main_table AND attname=hypertable_row.time_column_name
+                FROM pg_attribute WHERE attrelid = main_table AND attname=time_dimension_row.column_name
             ), ' ')::int2vector
         ) AND indrelid = main_table;
 
 
         IF index_count = 0 THEN
             EXECUTE format($$ CREATE INDEX ON %I.%I(%I, %I DESC) $$,
-            hypertable_row.schema_name, hypertable_row.table_name, partitioning_column, hypertable_row.time_column_name);
+            hypertable_row.schema_name, hypertable_row.table_name, partitioning_column, time_dimension_row.column_name);
         END IF;
     END IF;
 END

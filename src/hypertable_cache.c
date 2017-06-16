@@ -132,6 +132,8 @@ hypertable_cache_create_entry(Cache *cache, CacheQuery *query)
 		case 1:
 			Assert(strncmp(cache_entry->hypertable->fd.schema_name.data, hq->schema, NAMEDATALEN) == 0);
 			Assert(strncmp(cache_entry->hypertable->fd.table_name.data, hq->table, NAMEDATALEN) == 0);
+			ht = cache_entry->hypertable;   
+			ht->space = dimension_scan(ht->fd.id, ht->main_table_relid);
 			break;
 		default:
 			elog(ERROR, "Got an unexpected number of records: %d", number_found);
@@ -139,9 +141,6 @@ hypertable_cache_create_entry(Cache *cache, CacheQuery *query)
 
 	}
 
-	ht = cache_entry->hypertable;   
-	ht->space = dimension_scan(ht->fd.id, ht->main_table_relid);
-	
 	return query->result;
 }
 
