@@ -19,17 +19,21 @@ insert_statement_state_new(Oid relid)
 											   "Insert context",
 											   ALLOCSET_DEFAULT_SIZES);
 	InsertStatementState *state;
+	Hypertable *ht;
+	Cache *hypertable_cache;
 
 	oldctx = MemoryContextSwitchTo(mctx);
 
-	state = palloc(sizeof(InsertStatementState));
-	state->mctx = mctx;
+	hypertable_cache = hypertable_cache_pin();
+	ht = hypertable_cache_get_entry(hypertable_cache, relid);
 
+	state = palloc(sizeof(InsertStatementState) + sizeof(DimensionSlice *) * ht->space->num_open_dimensions);
+	state->mctx = mctx;
 	state->chunk_cache = chunk_cache_pin();
-	state->hypertable_cache = hypertable_cache_pin();
+	state->hypertable_cache = hypertable_cache;
 
 	/* Find hypertable and the time field column */
-	state->hypertable = hypertable_cache_get_entry(state->hypertable_cache, relid);
+	state->num_open_dimensions = ht->space->num_open_dimensions;
 	state->num_partitions = 0;
 
 	MemoryContextSwitchTo(oldctx);
@@ -78,6 +82,7 @@ set_or_update_new_entry(InsertStatementState *state, Hyperspace *hs, Point *poin
 extern InsertChunkState *
 insert_statement_state_get_insert_chunk_state(InsertStatementState *state, Hyperspace *hs, Point *point)
 {
+
 #if 0
 	/* First call, set up mem */
 	if (state->num_partitions == 0)

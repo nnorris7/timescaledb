@@ -6,6 +6,11 @@
 #include "hypertable_cache.h"
 #include "cache.h"
 
+
+typedef struct Hyperspace Hyperspace;
+typedef struct DimensionSlice DimensionSlice;;
+typedef struct Point Point;
+
 /* State used for every tuple in an insert statement */
 typedef struct
 {
@@ -16,10 +21,9 @@ typedef struct
 	Cache	   *hypertable_cache;
 	Hypertable *hypertable;
 	int			num_partitions;
+	int num_open_dimensions;
+	DimensionSlice **open_dimensions_slices;
 } InsertStatementState;
-
-typedef struct Hyperspace Hyperspace;
-typedef struct Point Point;
 
 InsertStatementState *insert_statement_state_new(Oid);
 void		insert_statement_state_destroy(InsertStatementState *);
