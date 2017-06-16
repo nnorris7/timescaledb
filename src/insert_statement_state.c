@@ -9,6 +9,7 @@
 #include "hypertable_cache.h"
 #include "partitioning.h"
 #include "dimension.h"
+#include "dimension_slice.h"
 #include "hypertable.h"
 
 InsertStatementState *
@@ -16,7 +17,7 @@ insert_statement_state_new(Oid relid)
 {
 	MemoryContext oldctx;
 	MemoryContext mctx = AllocSetContextCreate(CacheMemoryContext,
-											   "Insert context",
+											   "Insert statement state",
 											   ALLOCSET_DEFAULT_SIZES);
 	InsertStatementState *state;
 	Hypertable *ht;
@@ -76,6 +77,26 @@ set_or_update_new_entry(InsertStatementState *state, Hyperspace *hs, Point *poin
 }
 
 /*
+ * The insert statement state is valid iif the point is in all open dimension
+ * slices.
+ */
+static bool
+insert_statement_state_is_valid_for_point(InsertStatementState *state, Point *p)
+{
+	int i;
+
+	for (i = 0; i < state->num_open_dimensions; i++)
+	{
+		int64 coord = point_get_open_dimension_coordinate(p, i);
+		DimensionSlice *slice = state->open_dimensions_slices[i];
+
+		if (!point_coordinate_is_in_slice(&slice->fd, coord))
+			return false;
+	}
+	return true;
+}
+
+/*
  * Get an insert context to the chunk corresponding to the partition and
  * timepoint of a tuple.
  */
@@ -83,6 +104,17 @@ extern InsertChunkState *
 insert_statement_state_get_insert_chunk_state(InsertStatementState *state, Hyperspace *hs, Point *point)
 {
 
+	if (!insert_statement_state_is_valid_for_point(state, point))
+	{
+		/* setup new chunk insert state... */
+	}
+
+	/* Binary search slices in each of the closed dimensions */
+
+	/* 1) If chunk state found -> use
+	   2) If not found -> add chunk state and slice in each dimension
+	*/
+	
 #if 0
 	/* First call, set up mem */
 	if (state->num_partitions == 0)

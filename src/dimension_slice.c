@@ -1,12 +1,12 @@
+#include <stdlib.h>
 #include <postgres.h>
-
 #include <access/relscan.h>
 
 #include "catalog.h"
 #include "dimension_slice.h"
 #include "hypertable.h"
 #include "scanner.h"
-
+#include "dimension.h"
 
 static inline DimensionSlice *
 dimension_slice_from_form_data(Form_dimension_slice fd)
@@ -129,12 +129,6 @@ typedef struct PointScanCtx
 	int64 *point;
 } PointScanCtx;
 
-static inline bool
-point_in_slice(const Form_dimension_slice slice, const int64 coordinate)
-{
-	return coordinate >= slice->range_start && coordinate < slice->range_end;
-}
-
 static inline
 DimensionSlice *match_dimension_slice(Form_dimension_slice slice, int64 point[],
 									  Dimension *dimensions[], int16 num_dimensions)
@@ -145,8 +139,8 @@ DimensionSlice *match_dimension_slice(Form_dimension_slice slice, int64 point[],
 	{
 		int32 dimension_id = dimensions[i]->fd.id;
 		int64 coordinate = point[i];
-
-		if (slice->dimension_id == dimension_id && point_in_slice(slice, coordinate))
+		
+		if (slice->dimension_id == dimension_id && point_coordinate_is_in_slice(slice, coordinate))
 			return dimension_slice_from_form_data(slice);
 	}
 
@@ -221,4 +215,87 @@ dimension_slice_point_scan_heap(Hyperspace *space, int64 point[])
 		return NULL;
 
 	return cube;
+}
+
+static int
+cmp_slices(const void *left, const void *right)
+{
+	const DimensionSlice *left_slice = left;
+	const DimensionSlice *right_slice = right;
+	
+	if (left_slice->fd.range_start == right_slice->fd.range_start)
+	{
+		if (left_slice->fd.range_end == right_slice->fd.range_end)
+			return 0;
+
+		if (left_slice->fd.range_end > right_slice->fd.range_end)
+			return 1;
+
+		return -1;
+	}
+	
+	if (left_slice->fd.range_start > right_slice->fd.range_start)
+		return 1;
+	
+	return -1;
+}
+
+static int
+cmp_coordinate_and_slice(const void *left, const void *right)
+{
+	int64 coord = *((int64 *) left);
+	const DimensionSlice *slice = right;
+
+	if (coord < slice->fd.range_start)
+		return -1;
+
+	if (coord >= slice->fd.range_end)
+		return 1;
+
+	return 0;
+}
+
+static DimensionAxis *
+dimension_axis_expand(DimensionAxis *axis, int32 new_size)
+{
+	if (axis != NULL && axis->num_slots >= new_size)
+		return axis;
+
+	axis = repalloc(axis, sizeof(DimensionAxis) + sizeof(DimensionSlice *) * new_size);
+	axis->num_slots = new_size;
+	return axis;
+}
+
+DimensionAxis *
+dimension_axis_create(DimensionType type, int32 num_slices)
+{
+	DimensionAxis *axis = dimension_axis_expand(NULL, num_slices);
+	axis->type = type;
+	axis->num_slices = 0;
+	return axis;
+}
+
+int32
+dimension_axis_add_slice(DimensionAxis **axis, DimensionSlice *slice)
+{
+	if ((*axis)->num_slices + 1 > (*axis)->num_slots)
+		*axis = dimension_axis_expand(*axis, (*axis)->num_slots + 10);
+
+	(*axis)->slices[(*axis)->num_slices++] = slice;
+
+	return (*axis)->num_slices;
+}
+
+int32
+dimension_axis_add_slice_sort(DimensionAxis **axis, DimensionSlice *slice)
+{
+	dimension_axis_add_slice(axis, slice);
+	qsort((*axis)->slices, sizeof(DimensionSlice *), (*axis)->num_slices, cmp_slices);
+	return (*axis)->num_slices;
+}
+
+DimensionSlice *
+dimension_axis_find_slice(DimensionAxis *axis, int64 coordinate)
+{
+	return bsearch(&coordinate, axis->slices, sizeof(DimensionSlice *), axis->num_slices, cmp_coordinate_and_slice);
 }

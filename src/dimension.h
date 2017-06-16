@@ -50,16 +50,30 @@ typedef struct Hyperspace
 #define HYPERSPACE_NUM_DIMENSIONS(hs) \
 	((hs)->num_open_dimensions + (hs)->num_closed_dimensions)
 
+/*
+ * A point in an N-dimensional hyperspace.
+ */
 typedef struct Point
 {
 	int16 cardinality;
 	uint8 num_open;
 	uint8 num_closed;
+	/* Open dimension coordinates are stored before the closed coordinates */
 	int64 coordinates[0];
 } Point;
 
-extern Hyperspace *dimension_scan(int32 hypertable_id, Oid main_table_relid);
+#define point_coordinate_is_in_slice(slice, coord)					\
+	(coord >= (slice)->range_start && coord < (slice)->range_end)
 
+#define point_get_open_dimension_coordinate(p, i)	\
+	(p)->coordinates[i]
+
+#define point_get_closed_dimension_coordinate(p, i) \
+	(p)->coordinates[(p)->num_open + i]
+
+extern Hyperspace *dimension_scan(int32 hypertable_id, Oid main_table_relid);
 extern Point *hyperspace_calculate_point(Hyperspace *h, HeapTuple tuple, TupleDesc tupdesc);
+
+
 
 #endif /* TIMESCALEDB_DIMENSION_H */

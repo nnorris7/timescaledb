@@ -93,23 +93,17 @@ dimension_scan(int32 hypertable_id, Oid main_table_relid)
 static Point *
 point_create(int16 num_dimensions)
 {
-	Point *p = palloc0(sizeof(Point) + sizeof(int64) * num_dimensions);
+	Point *p = palloc0(sizeof(Point) + (sizeof(int64) * num_dimensions));
 	p->cardinality = num_dimensions;
 	p->num_closed = p->num_open = 0;
 	return p;
 }
-
+	
 Point *
 hyperspace_calculate_point(Hyperspace *hs, HeapTuple tuple, TupleDesc tupdesc)
 {
 	Point *p = point_create(HYPERSPACE_NUM_DIMENSIONS(hs));
 	int i;
-
-	for (i = 0; i < hs->num_closed_dimensions; i++)
-	{
-		Dimension *d = hs->closed_dimensions[i];
-		p->coordinates[p->num_closed++] = partitioning_func_apply_tuple(d->partitioning, tuple, tupdesc);
-	}
 
 	for (i = 0; i < hs->num_open_dimensions; i++)
 	{
@@ -125,6 +119,12 @@ hyperspace_calculate_point(Hyperspace *hs, HeapTuple tuple, TupleDesc tupdesc)
 		}
 
 		p->coordinates[p->num_open++] = time_value_to_internal(datum, d->fd.column_type);
+	}
+
+	for (i = 0; i < hs->num_closed_dimensions; i++)
+	{
+		Dimension *d = hs->closed_dimensions[i];
+		p->coordinates[p->num_open + p->num_closed++] = partitioning_func_apply_tuple(d->partitioning, tuple, tupdesc);
 	}
 
 	return p;
