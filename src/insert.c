@@ -49,15 +49,12 @@ insert_main_table_trigger(PG_FUNCTION_ARGS)
 	Hypertable *ht;
 	Point *point;
 	InsertChunkState *cstate;
-
 	Oid			relid = trigdata->tg_relation->rd_id;
 	TupleDesc	tupdesc = trigdata->tg_relation->rd_att;
-
 	MemoryContext oldctx;
 
 	PG_TRY();
 	{
-
 		/* Check that this is called the way it should be */
 		if (!CALLED_AS_TRIGGER(fcinfo))
 			elog(ERROR, "Trigger not called by trigger manager");
@@ -78,13 +75,16 @@ insert_main_table_trigger(PG_FUNCTION_ARGS)
 		}
 
 		oldctx = MemoryContextSwitchTo(insert_statement_state->mctx);
-		ht =  insert_statement_state->hypertable;
+		ht = insert_statement_state->hypertable;
 
 		/* Calculate the tuples point in the N-dimensional hyperspace */
 		point = hyperspace_calculate_point(ht->space, tuple, tupdesc);
-
+		
+		elog(NOTICE, "Point is %s", point_to_string(point));
+		
 		/* Find or create the insert state matching the point */
-		cstate = insert_statement_state_get_insert_chunk_state(insert_statement_state, ht->space, point);
+		cstate = insert_statement_state_get_insert_chunk_state(insert_statement_state,
+															   ht->space, point);
 		insert_chunk_state_insert_tuple(cstate, tuple);
 
 		MemoryContextSwitchTo(oldctx);

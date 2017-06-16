@@ -73,7 +73,7 @@ typedef struct Point
 
 extern Hyperspace *dimension_scan(int32 hypertable_id, Oid main_table_relid);
 extern Point *hyperspace_calculate_point(Hyperspace *h, HeapTuple tuple, TupleDesc tupdesc);
-
+extern const char *point_to_string(Point *p);
 
 
 #endif /* TIMESCALEDB_DIMENSION_H */

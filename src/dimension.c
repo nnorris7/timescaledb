@@ -1,6 +1,7 @@
 #include <postgres.h>
 #include <access/relscan.h>
 #include <utils/lsyscache.h>
+#include <inttypes.h>
 
 #include "catalog.h"
 #include "dimension.h"
@@ -11,7 +12,6 @@
 
 #define PARTITIONING_MODULO (USHRT_MAX)
 
-
 static Dimension *
 dimension_from_tuple(HeapTuple tuple, Oid main_table_relid)
 {
@@ -19,7 +19,7 @@ dimension_from_tuple(HeapTuple tuple, Oid main_table_relid)
 
 	d = palloc0(sizeof(Dimension));
 	memcpy(&d->fd, GETSTRUCT(tuple), sizeof(FormData_dimension));
-
+	
 	/* If there is no partitioning func set we assume open dimension */
 	d->type = heap_attisnull(tuple, Anum_dimension_partitioning_func) ?
 		DIMENSION_TYPE_OPEN : DIMENSION_TYPE_CLOSED;
@@ -33,7 +33,7 @@ dimension_from_tuple(HeapTuple tuple, Oid main_table_relid)
 												   PARTITIONING_MODULO,
 												   main_table_relid);
 	}
-
+	
 	d->column_attno = get_attnum(main_table_relid, NameStr(d->fd.column_name));
 
 	return d;
@@ -45,7 +45,7 @@ hyperspace_create(int32 hypertable_id, Oid main_table_relid)
 	Hyperspace *hs = palloc0(sizeof(Hyperspace));
 	hs->hypertable_id = hypertable_id;
 	hs->main_table_relid = main_table_relid;
-	hs->num_closed_dimensions = hs->num_closed_dimensions = 0;
+	hs->num_closed_dimensions = hs->num_open_dimensions = 0;
 	return hs;
 }
 
@@ -81,12 +81,12 @@ dimension_scan(int32 hypertable_id, Oid main_table_relid)
 		.scandirection = ForwardScanDirection,
 	};
 
-	/* Perform an index scan on schema and table. */
+	/* Perform an index scan on hypertable_id. */
 	ScanKeyInit(&scankey[0], Anum_dimension_hypertable_id_idx_hypertable_id,
 				BTEqualStrategyNumber, F_INT4EQ, Int32GetDatum(hypertable_id));
 
 	scanner_scan(&scanCtx);
-
+	
 	return space;
 }
 
@@ -97,6 +97,22 @@ point_create(int16 num_dimensions)
 	p->cardinality = num_dimensions;
 	p->num_closed = p->num_open = 0;
 	return p;
+}
+
+const char *
+point_to_string(Point *p)
+{
+	char *buf = palloc(100);
+	int i, j = 1;
+	
+	buf[0] = '(';
+
+	for (i = 0; i < p->cardinality; i++)
+		j += snprintf(buf + j, 100, "%" PRId64 ",", p->coordinates[i]);
+	
+	buf[j-1] = ')';
+
+	return buf;
 }
 	
 Point *
@@ -114,9 +130,7 @@ hyperspace_calculate_point(Hyperspace *hs, HeapTuple tuple, TupleDesc tupdesc)
 		datum = heap_getattr(tuple, d->column_attno, tupdesc, &isnull);
 
 		if (isnull)
-		{
 			elog(ERROR, "Time attribute not found in tuple");
-		}
 
 		p->coordinates[p->num_open++] = time_value_to_internal(datum, d->fd.column_type);
 	}
@@ -124,7 +138,8 @@ hyperspace_calculate_point(Hyperspace *hs, HeapTuple tuple, TupleDesc tupdesc)
 	for (i = 0; i < hs->num_closed_dimensions; i++)
 	{
 		Dimension *d = hs->closed_dimensions[i];
-		p->coordinates[p->num_open + p->num_closed++] = partitioning_func_apply_tuple(d->partitioning, tuple, tupdesc);
+		p->coordinates[p->num_open + p->num_closed++] =
+			partitioning_func_apply_tuple(d->partitioning, tuple, tupdesc);
 	}
 
 	return p;

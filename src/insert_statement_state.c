@@ -26,12 +26,14 @@ insert_statement_state_new(Oid relid)
 	oldctx = MemoryContextSwitchTo(mctx);
 
 	hypertable_cache = hypertable_cache_pin();
+
 	ht = hypertable_cache_get_entry(hypertable_cache, relid);
 
 	state = palloc(sizeof(InsertStatementState) + sizeof(DimensionSlice *) * ht->space->num_open_dimensions);
 	state->mctx = mctx;
 	state->chunk_cache = chunk_cache_pin();
 	state->hypertable_cache = hypertable_cache;
+	state->hypertable = ht;
 
 	/* Find hypertable and the time field column */
 	state->num_open_dimensions = ht->space->num_open_dimensions;

@@ -48,11 +48,6 @@ enum Anum_hypertable
 	Anum_hypertable_table_name,
 	Anum_hypertable_associated_schema_name,
 	Anum_hypertable_associated_table_prefix,
-	/*
-	Anum_hypertable_time_column_name,
-	Anum_hypertable_time_column_type,
-	Anum_hypertable_chunk_time_interval,
-	*/
 	_Anum_hypertable_max,
 };
 
@@ -66,11 +61,6 @@ typedef struct FormData_hypertable
     NameData table_name;
     NameData associated_schema_name;
     NameData associated_table_prefix;
-/*	
-    NameData time_column_name;
-    Oid time_column_type;
-	int64 chunk_time_interval;
-*/
 } FormData_hypertable;
 
 typedef FormData_hypertable *Form_hypertable;
@@ -134,7 +124,7 @@ typedef struct FormData_dimension
     NameData column_name;
 	Oid column_type;
     /* closed (space) columns */
-    int64 num_slices;
+    int16 num_slices;
     NameData partitioning_func_schema;
     NameData partitioning_func;
     /* open (time) columns */
