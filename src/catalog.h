@@ -240,7 +240,7 @@ typedef FormData_chunk *Form_chunk;
 enum
 {
 	CHUNK_ID_INDEX = 0,
-	CHUNK_HYPERTABLE_INDEX,
+	CHUNK_HYPERTABLE_ID_INDEX,
 	_MAX_CHUNK_INDEX,
 };
 

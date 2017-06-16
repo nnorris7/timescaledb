@@ -24,7 +24,7 @@ typedef struct Hypertable
 typedef struct HeapTupleData *HeapTuple;
 
 extern Hypertable *hypertable_from_tuple(HeapTuple tuple);
-extern Dimension *hypertable_time_dimension(Hypertable *h);
-extern Dimension *hypertable_space_dimension(Hypertable *h);
+extern Dimension *hypertable_get_open_dimension(Hypertable *h);
+extern Dimension *hypertable_get_closed_dimension(Hypertable *h);
 
 #endif /* TIMESCALEDB_HYPERTABLE_H */

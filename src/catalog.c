@@ -53,7 +53,7 @@ const static TableIndexDef catalog_table_index_definitions[_MAX_CATALOG_TABLES] 
 		.length = _MAX_CHUNK_INDEX,
 		.names = (char *[]) {
 			[CHUNK_ID_INDEX] = "chunk_pkey",
-			[CHUNK_PARTITION_TIME_INDEX] = "chunk_partition_id_start_time_end_time_idx",
+			[CHUNK_HYPERTABLE_ID_INDEX] = "chunk_hypertable_id_idx",
 		}
 	},
 };

@@ -23,6 +23,26 @@ dimension_slice_from_tuple(HeapTuple tuple)
 	return dimension_slice_from_form_data((Form_dimension_slice ) GETSTRUCT(tuple));
 }
 
+static inline Hypercube *
+hypercube_alloc(void)
+{
+    return palloc0(sizeof(Hypercube));
+}
+
+static inline void
+hypercube_free(Hypercube *hc)
+{
+	int i;
+
+	for (i = 0; i < hc->num_closed_slices; i++)
+		pfree(hc->closed_slices[i]);
+
+	for (i = 0; i < hc->num_open_slices; i++)
+		pfree(hc->open_slices[i]);
+
+	pfree(hc);
+}
+
 static bool
 dimension_slice_tuple_found(TupleInfo *ti, void *data)
 {
@@ -63,36 +83,40 @@ dimension_slice_scan(int32 dimension_id, int64 coordinate)
 	return slice;
 }
 
-Hypercube *
-dimension_slice_point_scan(Hyperspace *space, int64 point[])
+static inline bool
+scan_dimensions(Hypercube *hc, Dimension *dimensions[], int16 num_dimensions, int64 point[])
 {
-	Catalog    *catalog = catalog_get();
-	Hypercube *cube = palloc0(sizeof(Hypercube));
 	int i;
 
-	// FIXME: this iteration does not work because time and space dimensions are
-	// not back-to-back
-	for (i = 0; i < HYPERSPACE_NUM_DIMENSIONS(space); i++)
+	for (i = 0; i < num_dimensions; i++)
 	{
-		Dimension *d = space->dimensions[i];
+		Dimension *d = dimensions[i];
 		DimensionSlice *slice = dimension_slice_scan(d->fd.id, point[i]);
 
 		if (slice == NULL)
-		{
-			// TODO: free slices
-			int j;
+			return false;
 
-			// FIXME: this iteration does not work because slices are not back-to-back
-			for (j = 0; j < HYPERCUBE_NUM_SLICES(cube); j++)
-				pfree(cube->slices[j]);
-			pfree(cube);
-			return NULL;
-		}
-
-		if (IS_SPACE_DIMENSION(d))
-			cube->time_slices[cube->num_time_slices++] = slice;
+		if (IS_CLOSED_DIMENSION(d))
+			hc->closed_slices[hc->num_closed_slices++] = slice;
 		else
-			cube->space_slices[cube->num_space_slices++] = slice;
+			hc->open_slices[hc->num_open_slices++] = slice;
+	}
+	return true;
+}
+
+Hypercube *
+dimension_slice_point_scan(Hyperspace *space, int64 point[])
+{
+	Hypercube *cube = hypercube_alloc();
+
+	if (!scan_dimensions(cube, space->closed_dimensions, space->num_closed_dimensions, point)) {
+		hypercube_free(cube);
+		return NULL;
+	}
+
+	if (!scan_dimensions(cube, space->open_dimensions, space->num_open_dimensions, point)) {
+		hypercube_free(cube);
+		return NULL;
 	}
 
 	return cube;
@@ -139,24 +163,24 @@ point_filter(TupleInfo *ti, void *data)
 
 	/* Match space dimension */
 	slice = match_dimension_slice((Form_dimension_slice) GETSTRUCT(ti->tuple), ctx->point,
-								  hs->space_dimensions, hs->num_space_dimensions);
+								  hs->closed_dimensions, hs->num_closed_dimensions);
 
 	if (slice != NULL)
 	{
-		hc->space_slices[hc->num_space_slices++] = slice;
-		return hs->num_space_dimensions != hc->num_space_slices &&
-			hs->num_time_dimensions != hc->num_space_slices;
+		hc->closed_slices[hc->num_closed_slices++] = slice;
+		return hs->num_closed_dimensions != hc->num_closed_slices &&
+			hs->num_open_dimensions != hc->num_closed_slices;
 	}
 
-	/* Match time dimension */
+	/* Match open dimension */
 	slice = match_dimension_slice((Form_dimension_slice) GETSTRUCT(ti->tuple), ctx->point,
-								  hs->time_dimensions, hs->num_time_dimensions);
+								  hs->open_dimensions, hs->num_open_dimensions);
 
 	if (slice != NULL)
 	{
-		hc->time_slices[hc->num_time_slices++] = slice;
-		return hs->num_space_dimensions != hc->num_space_slices &&
-			hs->num_time_dimensions != hc->num_space_slices;
+		hc->open_slices[hc->num_open_slices++] = slice;
+		return hs->num_closed_dimensions != hc->num_closed_slices &&
+			hs->num_open_dimensions != hc->num_closed_slices;
 	}
 
 	return true;
@@ -188,12 +212,12 @@ dimension_slice_point_scan_heap(Hyperspace *space, int64 point[])
 		.scandirection = ForwardScanDirection,
 	};
 
-	cube->num_time_slices = cube->num_space_slices = 0;
+	cube->num_open_slices = cube->num_closed_slices = 0;
 	
 	scanner_scan(&scanCtx);
 
-	if (cube->num_time_slices != space->num_time_dimensions ||
-		cube->num_space_slices != space->num_space_dimensions)
+	if (cube->num_open_slices != space->num_open_dimensions ||
+		cube->num_closed_slices != space->num_closed_dimensions)
 		return NULL;
 	
 	return cube;

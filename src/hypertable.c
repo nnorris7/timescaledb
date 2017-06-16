@@ -21,13 +21,13 @@ hypertable_from_tuple(HeapTuple tuple)
 }
 
 Dimension *
-hypertable_time_dimension(Hypertable *h)
+hypertable_get_open_dimension(Hypertable *h)
 {
-	return h->space->time_dimensions[0];
+	return h->space->open_dimensions[0];
 }
 
 Dimension *
-hypertable_space_dimension(Hypertable *h)
+hypertable_get_closed_dimension(Hypertable *h)
 {
-	return h->space->space_dimensions[0];
+	return h->space->closed_dimensions[0];
 }
