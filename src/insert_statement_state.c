@@ -9,6 +9,7 @@
 #include "hypertable_cache.h"
 #include "partitioning.h"
 #include "dimension.h"
+#include "hypertable.h"
 
 InsertStatementState *
 insert_statement_state_new(Oid relid)
@@ -18,7 +19,6 @@ insert_statement_state_new(Oid relid)
 											   "Insert context",
 											   ALLOCSET_DEFAULT_SIZES);
 	InsertStatementState *state;
-	Dimension *time_dim;
 
 	oldctx = MemoryContextSwitchTo(mctx);
 
@@ -30,10 +30,6 @@ insert_statement_state_new(Oid relid)
 
 	/* Find hypertable and the time field column */
 	state->hypertable = hypertable_cache_get_entry(state->hypertable_cache, relid);
-
-	time_dim = hypertable_time_dimension(state->hypertable);
-	state->time_attno = get_attnum(relid, NameStr(time_dim->fd.column_name));
-
 	state->num_partitions = 0;
 
 	MemoryContextSwitchTo(oldctx);
@@ -60,8 +56,9 @@ insert_statement_state_destroy(InsertStatementState *state)
 }
 
 static void
-set_or_update_new_entry(InsertStatementState *state, Partition *partition, int64 timepoint)
+set_or_update_new_entry(InsertStatementState *state, Hyperspace *hs, Point *point)
 {
+	/*
 	Chunk	   *chunk;
 
 	if (state->cstates[partition->index] != NULL)
@@ -71,6 +68,7 @@ set_or_update_new_entry(InsertStatementState *state, Partition *partition, int64
 
 	chunk = chunk_cache_get(state->chunk_cache, partition, timepoint);
 	state->cstates[partition->index] = insert_chunk_state_new(chunk);
+	*/
 }
 
 /*
@@ -78,8 +76,9 @@ set_or_update_new_entry(InsertStatementState *state, Partition *partition, int64
  * timepoint of a tuple.
  */
 extern InsertChunkState *
-insert_statement_state_get_insert_chunk_state(InsertStatementState *state, Partition *partition, PartitionEpoch *epoch, int64 timepoint)
+insert_statement_state_get_insert_chunk_state(InsertStatementState *state, Hyperspace *hs, Point *point)
 {
+#if 0
 	/* First call, set up mem */
 	if (state->num_partitions == 0)
 	{
@@ -110,4 +109,6 @@ insert_statement_state_get_insert_chunk_state(InsertStatementState *state, Parti
 	}
 
 	return state->cstates[partition->index];
+#endif
+	return NULL;
 }

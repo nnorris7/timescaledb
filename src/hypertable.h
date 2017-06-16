@@ -14,7 +14,7 @@ typedef struct Dimension Dimension;
 typedef struct Hypertable
 {
 	FormData_hypertable fd;
-	Oid         main_table;
+	Oid         main_table_relid;
 	int			num_epochs;
 	/* Array of PartitionEpoch. Order by start_time */
 	PartitionEpoch *epochs[MAX_EPOCHS_PER_HYPERTABLE];

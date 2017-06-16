@@ -13,7 +13,7 @@ dimension_slice_from_form_data(Form_dimension_slice fd)
 {
 	DimensionSlice *ds;
 	ds = palloc0(sizeof(DimensionSlice));
-	memcpy(&ds->fd, fd, sizeof(FormData_dimension_slice));   
+	memcpy(&ds->fd, fd, sizeof(FormData_dimension_slice));
 	return ds;
 }
 
@@ -26,7 +26,7 @@ dimension_slice_from_tuple(HeapTuple tuple)
 static inline Hypercube *
 hypercube_alloc(void)
 {
-    return palloc0(sizeof(Hypercube));
+	return palloc0(sizeof(Hypercube));
 }
 
 static inline void
@@ -68,7 +68,7 @@ dimension_slice_scan(int32 dimension_id, int64 coordinate)
 		.lockmode = AccessShareLock,
 		.scandirection = ForwardScanDirection,
 	};
-	
+
 	/* Perform an index scan for slice matching the dimension's ID and which
 	 * encloses the coordinate */
 	ScanKeyInit(&scankey[0], Anum_dimension_slice_dimension_id_range_start_range_end_idx_dimension_id,
@@ -140,19 +140,19 @@ DimensionSlice *match_dimension_slice(Form_dimension_slice slice, int64 point[],
 									  Dimension *dimensions[], int16 num_dimensions)
 {
 	int i;
-	
+
 	for (i = 0; i < num_dimensions; i++)
 	{
 		int32 dimension_id = dimensions[i]->fd.id;
 		int64 coordinate = point[i];
-		
+
 		if (slice->dimension_id == dimension_id && point_in_slice(slice, coordinate))
 			return dimension_slice_from_form_data(slice);
 	}
 
 	return NULL;
 }
-	
+
 static bool
 point_filter(TupleInfo *ti, void *data)
 {
@@ -161,7 +161,7 @@ point_filter(TupleInfo *ti, void *data)
 	Hypercube *hc = ctx->hc;
 	DimensionSlice *slice;
 
-	/* Match space dimension */
+	/* Match closed dimension */
 	slice = match_dimension_slice((Form_dimension_slice) GETSTRUCT(ti->tuple), ctx->point,
 								  hs->closed_dimensions, hs->num_closed_dimensions);
 
@@ -213,12 +213,12 @@ dimension_slice_point_scan_heap(Hyperspace *space, int64 point[])
 	};
 
 	cube->num_open_slices = cube->num_closed_slices = 0;
-	
+
 	scanner_scan(&scanCtx);
 
 	if (cube->num_open_slices != space->num_open_dimensions ||
 		cube->num_closed_slices != space->num_closed_dimensions)
 		return NULL;
-	
+
 	return cube;
 }

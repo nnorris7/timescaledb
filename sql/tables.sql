@@ -57,20 +57,19 @@ CREATE TABLE  _timescaledb_catalog.dimension (
     id                          SERIAL   NOT NULL PRIMARY KEY,
     hypertable_id               INTEGER  NOT NULL  REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE,
     column_name                 NAME     NOT NULL,
+    column_type                 REGTYPE  NOT NULL,
     -- closed dimensions
     num_slices                  SMALLINT NULL,
     partitioning_func_schema    NAME     NULL,
-    partitioning_func           NAME     NULL,  -- function name of a function of the form func(data_value) -> [0, 32768)
+    partitioning_func           NAME     NULL,
     -- open dimensions (e.g., time)
-    column_type                 REGTYPE  NULL,
     interval_length             BIGINT   NULL CHECK(interval_length IS NULL OR interval_length > 0),
     CHECK (
         (partitioning_func_schema IS NULL AND partitioning_func IS NULL) OR 
         (partitioning_func_schema IS NOT NULL AND partitioning_func IS NOT NULL)
     ),
     CHECK (
-        (column_type IS NOT NULL AND interval_length IS NOT NULL) OR 
-        (column_type IS NULL AND num_slices IS NOT NULL)
+        (interval_length IS NOT NULL) OR (num_slices IS NOT NULL)
     )
 );
 CREATE INDEX ON  _timescaledb_catalog.dimension(hypertable_id);
@@ -91,13 +90,6 @@ SELECT pg_catalog.pg_extension_config_dump('_timescaledb_catalog.dimension_slice
 SELECT pg_catalog.pg_extension_config_dump(pg_get_serial_sequence('_timescaledb_catalog.dimension_slice','id'), '');
 
 
-CREATE TABLE  _timescaledb_catalog.chunk_constraint(
-    dimension_slice_id  INTEGER  NOT NULL REFERENCES _timescaledb_catalog.dimension(id) ON DELETE CASCADE,
-    chunk_id            INTEGER  NOT NULL REFERENCES _timescaledb_catalog.chunk(id) ON DELETE CASCADE,
-    PRIMARY KEY(dimension_slice_id, chunk_id)
-);
-SELECT pg_catalog.pg_extension_config_dump('_timescaledb_catalog.chunk_constraint', '');
-
 -- Represent a chunk of data, which is data in a hypertable that is
 -- partitioned by both the partition_column and time.
 CREATE TABLE IF NOT EXISTS _timescaledb_catalog.chunk (
@@ -105,11 +97,18 @@ CREATE TABLE IF NOT EXISTS _timescaledb_catalog.chunk (
     hypertable_id   INT     NOT NULL    REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE,
     schema_name     NAME    NOT NULL,
     table_name      NAME     NOT NULL,
-    UNIQUE (schema_name, table_name),
+    UNIQUE (schema_name, table_name)
 );
 CREATE INDEX ON _timescaledb_catalog.chunk(hypertable_id);
 SELECT pg_catalog.pg_extension_config_dump('_timescaledb_catalog.chunk', '');
 SELECT pg_catalog.pg_extension_config_dump(pg_get_serial_sequence('_timescaledb_catalog.chunk','id'), '');
+
+CREATE TABLE  _timescaledb_catalog.chunk_constraint (
+    dimension_slice_id  INTEGER  NOT NULL REFERENCES _timescaledb_catalog.dimension(id) ON DELETE CASCADE,
+    chunk_id            INTEGER  NOT NULL REFERENCES _timescaledb_catalog.chunk(id) ON DELETE CASCADE,
+    PRIMARY KEY(dimension_slice_id, chunk_id)
+);
+SELECT pg_catalog.pg_extension_config_dump('_timescaledb_catalog.chunk_constraint', '');
 
 -- Represents an index on the hypertable
 CREATE TABLE IF NOT EXISTS _timescaledb_catalog.hypertable_index (

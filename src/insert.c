@@ -64,15 +64,8 @@ insert_main_table_trigger(PG_FUNCTION_ARGS)
 {
 	TriggerData *trigdata = (TriggerData *) fcinfo->context;
 	HeapTuple	tuple;
-	Partition  *part;
-
-	Datum		datum;
-	bool		isnull;
-	int64		timepoint;
-	int64		spacepoint;
-	PartitionEpoch *epoch;
-	Dimension *open_dim, *closed_dim;
-
+	Hypertable *ht;
+	Point *point;
 	InsertChunkState *cstate;
 
 	Oid			relid = trigdata->tg_relation->rd_id;
@@ -82,6 +75,7 @@ insert_main_table_trigger(PG_FUNCTION_ARGS)
 
 	PG_TRY();
 	{
+
 		/* Check that this is called the way it should be */
 		if (!CALLED_AS_TRIGGER(fcinfo))
 			elog(ERROR, "Trigger not called by trigger manager");
@@ -102,39 +96,13 @@ insert_main_table_trigger(PG_FUNCTION_ARGS)
 		}
 
 		oldctx = MemoryContextSwitchTo(insert_statement_state->mctx);
+		ht =  insert_statement_state->hypertable;
 
+		/* Calculate the tuples point in the N-dimensional hyperspace */
+		point = hyperspace_calculate_point(ht->space, tuple, tupdesc);
 
-		/* Get the time dimension associated with the hypertable */
-		open_dim = hypertable_get_open_dimension(insert_statement_state->hypertable);
-
-		/*
-		 * Get the timepoint from the tuple, converting to our internal time
-		 * representation
-		 */
-		datum = heap_getattr(tuple, insert_statement_state->time_attno, tupdesc, &isnull);
-
-		if (isnull)
-		{
-			elog(ERROR, "No time attribute in tuple");
-		}
-
-		timepoint = time_value_to_internal(datum, open_dim->fd.time_type);
-
-		closed_dim = hypertable_get_closed_dimension(insert_statement_state->hypertable);
-		
-		/* Find correct partition */
-		if (closed_dim->num_slices > 1)
-		{
-			spacepoint = partitioning_func_apply_tuple(closed_dim->partitioning, tuple, tupdesc);
-		}
-		else
-		{
-			spacepoint = KEYSPACE_PT_NO_PARTITIONING;
-		}
-
-		part = partition_epoch_get_partition(epoch, spacepoint);
-
-		cstate = insert_statement_state_get_insert_chunk_state(insert_statement_state, part, epoch, timepoint);
+		/* Find or create the insert state matching the point */
+		cstate = insert_statement_state_get_insert_chunk_state(insert_statement_state, ht->space, point);
 		insert_chunk_state_insert_tuple(cstate, tuple);
 
 		MemoryContextSwitchTo(oldctx);

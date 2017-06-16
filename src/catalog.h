@@ -23,8 +23,8 @@ enum CatalogTable
 	HYPERTABLE = 0,
 	DIMENSION,
 	DIMENSION_SLICE,
-	CHUNK_CONSTRAINT,
 	CHUNK,
+	CHUNK_CONSTRAINT,
 	_MAX_CATALOG_TABLES,
 };
 
@@ -116,10 +116,10 @@ enum Anum_dimension
 	Anum_dimension_id = 1,
 	Anum_dimension_hypertable_id,
 	Anum_dimension_column_name,
+	Anum_dimension_column_type,
 	Anum_dimension_num_slices,
 	Anum_dimension_partitioning_func_schema,
 	Anum_dimension_partitioning_func,
-	Anum_dimension_time_type,
 	Anum_dimension_interval_length,
 	_Anum_dimension_max,
 };
@@ -132,12 +132,12 @@ typedef struct FormData_dimension
 	int32 id;
     int32 hypertable_id;
     NameData column_name;
-    /* space columns */
+	Oid column_type;
+    /* closed (space) columns */
     int64 num_slices;
     NameData partitioning_func_schema;
     NameData partitioning_func;
-    /* time columns */
-	Oid time_type;
+    /* open (time) columns */
     int64 interval_length;
 } FormData_dimension;
 

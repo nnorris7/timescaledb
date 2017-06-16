@@ -11,8 +11,8 @@ static const char *catalog_table_names[_MAX_CATALOG_TABLES] = {
 	[HYPERTABLE] = HYPERTABLE_TABLE_NAME,
 	[DIMENSION] = DIMENSION_SLICE_TABLE_NAME,
 	[DIMENSION_SLICE] = DIMENSION_SLICE_TABLE_NAME,
-	[CHUNK_CONSTRAINT] = CHUNK_CONSTRAINT_TABLE_NAME,
-	[CHUNK] = CHUNK_TABLE_NAME
+	[CHUNK] = CHUNK_TABLE_NAME,
+	[CHUNK_CONSTRAINT] = CHUNK_CONSTRAINT_TABLE_NAME
 };
 
 typedef struct TableIndexDef
@@ -43,19 +43,19 @@ const static TableIndexDef catalog_table_index_definitions[_MAX_CATALOG_TABLES] 
 			[DIMENSION_SLICE_DIMENSION_ID_RANGE_START_RANGE_END_IDX] = "dimension_slice_dimension_id_range_start_range_end_idx",
 		}
 	},
-	[CHUNK_CONSTRAINT] = {
-		.length = _MAX_CHUNK_CONSTRAINT_INDEX,
-		.names = (char *[]) {
-			[CHUNK_CONSTRAINT_ID_IDX] = "chunk_constraint_pkey",
-		}
-	},
 	[CHUNK] = {
 		.length = _MAX_CHUNK_INDEX,
 		.names = (char *[]) {
 			[CHUNK_ID_INDEX] = "chunk_pkey",
 			[CHUNK_HYPERTABLE_ID_INDEX] = "chunk_hypertable_id_idx",
 		}
-	},
+	},	
+	[CHUNK_CONSTRAINT] = {
+		.length = _MAX_CHUNK_CONSTRAINT_INDEX,
+		.names = (char *[]) {
+			[CHUNK_CONSTRAINT_ID_IDX] = "chunk_constraint_pkey",
+		}
+	}
 };
 
 /* Names for proxy tables used for cache invalidation. Must match names in

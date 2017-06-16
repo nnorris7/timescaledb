@@ -140,7 +140,7 @@ hypertable_cache_create_entry(Cache *cache, CacheQuery *query)
 	}
 
 	ht = cache_entry->hypertable;   
-	ht->space = dimension_scan(ht->fd.id);
+	ht->space = dimension_scan(ht->fd.id, ht->main_table_relid);
 	
 	return query->result;
 }
