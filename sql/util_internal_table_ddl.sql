@@ -107,9 +107,9 @@ DECLARE
 BEGIN
     FOR constraint_row IN 
         SELECT c.schema_name, c.table_name, ds.id as dimension_slice_id 
-        FROM chunk c
-        INNER JOIN chunk_constraint cc ON (cc.chunk_id = c.id)
-        INNER JOIN dimension_slice ds ON (ds.id = cc.dimension_slice_id)
+        FROM _timescaledb_catalog.chunk c
+        INNER JOIN _timescaledb_catalog.chunk_constraint cc ON (cc.chunk_id = c.id)
+        INNER JOIN _timescaledb_catalog.dimension_slice ds ON (ds.id = cc.dimension_slice_id)
         LOOP
         EXECUTE format(
             $$

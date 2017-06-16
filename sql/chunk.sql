@@ -38,18 +38,19 @@ DECLARE
     inter BIGINT;
 BEGIN
     SELECT *
+    FROM _timescaledb_catalog.dimension
     INTO STRICT dimension_row
-    WHERE id = time_dimension_id;
+    WHERE id = dimension_id;
 
     IF dimension_row.interval_length IS NOT NULL THEN
         range_start := (dimension_value / dimension_row.interval_length) * dimension_row.interval_length;
         range_end := range_start + dimension_row.interval_length;
     ELSE
-       inter := (32768 / dimension_row.num_slices);
+       inter := (65535 / dimension_row.num_slices);
        IF dimension_value >= inter * (dimension_row.num_slices - 1) THEN
           --put overflow from integer-division errors in last range
           range_start = inter * (dimension_row.num_slices - 1);
-          range_end = 32768;
+          range_end = 65535;
        ELSE
           range_start = (dimension_value / inter) * inter;
           range_end := range_start + inter;
@@ -83,8 +84,8 @@ BEGIN
         SELECT free_slice.range_start, free_slice.range_end
         INTO new_range_start, new_range_end
         FROM _timescaledb_catalog.chunk c
-        INNER JOIN _timescaledb_catalog.chunk_constraint cc ON (cc.chunk_id = c.chunk_id) 
-        INNER JOIN _timescaledb_catalog.dimension_slice free_slice ON (ds.id = cc.dimension_slice_id AND ds.dimension_id = free_dimension_id)
+        INNER JOIN _timescaledb_catalog.chunk_constraint cc ON (cc.chunk_id = c.id) 
+        INNER JOIN _timescaledb_catalog.dimension_slice free_slice ON (free_slice.id = cc.dimension_slice_id AND free_slice.dimension_id = free_dimension_id)
         WHERE 
            free_slice.range_end > free_dimension_value and free_slice.range_start <= free_dimension_value
         LIMIT 1;
@@ -104,8 +105,8 @@ BEGIN
     SELECT free_slice.range_end 
     INTO overlap_value
     FROM _timescaledb_catalog.chunk c
-    INNER JOIN _timescaledb_catalog.chunk_constraint cc ON (cc.chunk_id = c.chunk_id) 
-    INNER JOIN _timescaledb_catalog.dimension_slice free_slice ON (ds.id = cc.dimension_slice_id AND ds.dimension_id = free_dimension_id)
+    INNER JOIN _timescaledb_catalog.chunk_constraint cc ON (cc.chunk_id = c.id) 
+    INNER JOIN _timescaledb_catalog.dimension_slice free_slice ON (free_slice.id = cc.dimension_slice_id AND free_slice.dimension_id = free_dimension_id)
     WHERE 
     c.id = (
         SELECT cc.chunk_id
@@ -137,8 +138,8 @@ BEGIN
     SELECT free_slice.range_start
     INTO overlap_value
     FROM _timescaledb_catalog.chunk c
-    INNER JOIN _timescaledb_catalog.chunk_constraint cc ON (cc.chunk_id = c.chunk_id) 
-    INNER JOIN _timescaledb_catalog.dimension_slice free_slice ON (ds.id = cc.dimension_slice_id AND ds.dimension_id = free_dimension_id)
+    INNER JOIN _timescaledb_catalog.chunk_constraint cc ON (cc.chunk_id = c.id) 
+    INNER JOIN _timescaledb_catalog.dimension_slice free_slice ON (free_slice.id = cc.dimension_slice_id AND free_slice.dimension_id = free_dimension_id)
     WHERE 
     c.id = (
         SELECT cc.chunk_id
@@ -189,6 +190,7 @@ DECLARE
 BEGIN
     SELECT *
     INTO STRICT dimension_row
+    FROM _timescaledb_catalog.dimension
     WHERE id = time_dimension_id;
 
     SELECT *
@@ -228,7 +230,7 @@ BEGIN
               range_start = time_start AND
               range_end = time_end
     )
-    INSERT INTO chunk_constraint (dimension_slice_id, chunk_id)
+    INSERT INTO _timescaledb_catalog.chunk_constraint (dimension_slice_id, chunk_id)
     SELECT space_slice.id, chunk.id FROM space_slice, chunk
     UNION 
     SELECT time_slice.id, chunk.id FROM time_slice, chunk;
@@ -259,7 +261,7 @@ BEGIN
     END IF;
 
     IF chunk_row IS NULL THEN -- recheck
-        RAISE EXCEPTION 'Should never happen: chunk not found after creation on meta'
+        RAISE EXCEPTION 'Should never happen: chunk not found after creation'
         USING ERRCODE = 'IO501';
     END IF;
 
@@ -283,6 +285,7 @@ BEGIN
     chunk_row := _timescaledb_internal.chunk_get(time_dimension_id, time_value, space_dimension_id, space_value);
 
     IF chunk_row IS NULL THEN
+        raise warning 'creating % % % %', time_dimension_id, time_value, space_dimension_id, space_value;
         chunk_row := _timescaledb_internal.chunk_create(time_dimension_id, time_value, space_dimension_id, space_value);
     END IF;
 
