@@ -1,4 +1,4 @@
--- Add a new partition epoch with equally sized partitions
+-- get a chunk if it exists
 CREATE OR REPLACE FUNCTION _timescaledb_internal.chunk_get(
     time_dimension_id           INTEGER,
     time_value                  BIGINT,
@@ -66,15 +66,18 @@ CREATE OR REPLACE FUNCTION _timescaledb_internal.chunk_calculate_new_ranges(
         fixed_dimension_id     INTEGER,
         fixed_dimension_value  BIGINT,
         align                  BOOLEAN,
-    OUT new_range_start  BIGINT = NULL,
-    OUT new_range_end    BIGINT = NULL
+    OUT new_range_start        BIGINT,
+    OUT new_range_end          BIGINT
 )
 LANGUAGE PLPGSQL STABLE AS
 $BODY$
 DECLARE
     overlap_value BIGINT;
-    alignment_found := FALSE;
+    alignment_found BOOLEAN := FALSE;
 BEGIN
+    new_range_start := NULL;
+    new_range_end := NULL;
+
     IF align THEN
         --if i am aligning then fix see if other chunks have values that fit me in the free dimension
         SELECT free_slice.range_start, free_slice.range_end
@@ -85,7 +88,7 @@ BEGIN
         WHERE 
            free_slice.range_end > free_dimension_value and free_slice.range_start <= free_dimension_value
         LIMIT 1;
-        
+
         SELECT new_range_start IS NOT NULL INTO alignment_found; 
     END IF;
 
