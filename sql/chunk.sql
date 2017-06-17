@@ -285,7 +285,6 @@ BEGIN
     chunk_row := _timescaledb_internal.chunk_get(time_dimension_id, time_value, space_dimension_id, space_value);
 
     IF chunk_row IS NULL THEN
-        raise warning 'creating % % % %', time_dimension_id, time_value, space_dimension_id, space_value;
         chunk_row := _timescaledb_internal.chunk_create(time_dimension_id, time_value, space_dimension_id, space_value);
     END IF;
 

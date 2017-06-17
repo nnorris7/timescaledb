@@ -110,6 +110,7 @@ BEGIN
         FROM _timescaledb_catalog.chunk c
         INNER JOIN _timescaledb_catalog.chunk_constraint cc ON (cc.chunk_id = c.id)
         INNER JOIN _timescaledb_catalog.dimension_slice ds ON (ds.id = cc.dimension_slice_id)
+        WHERE c.id = chunk_add_constraints.chunk_id
         LOOP
         EXECUTE format(
             $$
