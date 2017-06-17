@@ -276,8 +276,8 @@ void dimension_slice_free(DimensionSlice *slice)
 static int
 cmp_slices(const void *left, const void *right)
 {
-	const DimensionSlice *left_slice = left;
-	const DimensionSlice *right_slice = right;
+	const DimensionSlice *left_slice = *((DimensionSlice **) left);
+	const DimensionSlice *right_slice = *((DimensionSlice **) right);
 	
 	if (left_slice->fd.range_start == right_slice->fd.range_start)
 	{
@@ -300,7 +300,7 @@ static int
 cmp_coordinate_and_slice(const void *left, const void *right)
 {
 	int64 coord = *((int64 *) left);
-	const DimensionSlice *slice = right;
+	const DimensionSlice *slice = *((DimensionSlice **) right);
 
 	if (coord < slice->fd.range_start)
 		return -1;
@@ -353,14 +353,17 @@ int32
 dimension_axis_add_slice_sort(DimensionAxis **axis, DimensionSlice *slice)
 {
 	dimension_axis_add_slice(axis, slice);
-	qsort((*axis)->slices, sizeof(DimensionSlice *), (*axis)->num_slices, cmp_slices);
+	qsort((*axis)->slices, (*axis)->num_slices, sizeof(DimensionSlice *), cmp_slices);
 	return (*axis)->num_slices;
 }
 
 DimensionSlice *
 dimension_axis_find_slice(DimensionAxis *axis, int64 coordinate)
 {
-	return bsearch(&coordinate, axis->slices, sizeof(DimensionSlice *), axis->num_slices, cmp_coordinate_and_slice);
+  DimensionSlice ** res = bsearch(&coordinate, axis->slices, axis->num_slices, sizeof(DimensionSlice *), cmp_coordinate_and_slice);
+  if (res == NULL)
+	  return NULL;
+  return *res;
 }
 
 void dimension_axis_free(DimensionAxis *axis)

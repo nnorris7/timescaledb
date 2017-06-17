@@ -162,6 +162,8 @@ insert_statement_state_destroy(InsertStatementState *state)
 		}
 	}
 
+	insert_state_cache_free(state->cache);
+
 	cache_release(state->chunk_cache);
 	cache_release(state->hypertable_cache);
 
@@ -228,6 +230,7 @@ insert_statement_state_get_insert_chunk_state(InsertStatementState *state, Hyper
 		Chunk * new_chunk;
 		List *constraints;
 		List *slices;
+		elog(WARNING, "LOOKUP");
 		//NOTE: assumes 1 or 2 dims
 		Assert(hs->num_open_dimensions == 1 && hs->num_closed_dimensions <= 1);
 		if (hs->num_closed_dimensions == 1) 
