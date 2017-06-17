@@ -39,7 +39,7 @@ hypercube_free(Hypercube *hc)
 {
 	int i;
 
-	for (i = 0; i < hc->num_dimensions; i++)
+	for (i = 0; i < hc->num_slices; i++)
 		pfree(hc->slices[i]);
 
 	pfree(hc);
@@ -125,7 +125,8 @@ hypercube_from_constraints(ChunkConstraint constraints[], int16 num_constraints)
 		Assert(slice != NULL);
 		hc->slices[hc->num_slices++] = slice;
 	}
-	
+
+	Assert(hc->num_slices == hc->num_dimensions);
 	return hc;
 }
 
