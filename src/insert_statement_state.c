@@ -223,8 +223,6 @@ insert_statement_state_get_insert_chunk_state(InsertStatementState *state, Hyper
 		Chunk * new_chunk;
 		Hypercube *hc;
 
-		elog(WARNING, "LOOKUP");
-		
 		new_chunk = chunk_get_or_create(hs, point);
 
 		if (NULL == new_chunk)
