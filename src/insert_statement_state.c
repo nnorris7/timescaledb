@@ -57,12 +57,16 @@ static void insert_state_cache_add(InsertStateCache *cache, Hypercube *hc,
 		DimensionSlice *match;
 
 		Assert(target->storage == NULL);
-		
+
 		if (axis == NULL)
 		{
 			last->storage = insert_state_cache_dimension_create();
 			last->storage_free = insert_state_cache_free_internal_node;
 			axis = last->storage;
+		}
+		if(axis->num_slices > 0) 
+		{
+			Assert(axis->slices[0]->fd.dimension_id = target->fd.dimension_id);
 		}
 		
 		match = dimension_axis_find_slice(axis, target->fd.range_start);
@@ -76,7 +80,8 @@ static void insert_state_cache_add(InsertStateCache *cache, Hypercube *hc,
 		last = match;
 		axis = last->storage; /* Internal nodes point to the next Dimension's Axis */ 
 	}
-	
+
+	Assert(last->storage == NULL);
 	last->storage = end_store; /* at the end we store the object */
 	last->storage_free = end_store_free;
 }
@@ -220,7 +225,6 @@ insert_statement_state_get_insert_chunk_state(InsertStatementState *state, Hyper
 
 		elog(WARNING, "LOOKUP");
 		
-		/* NOTE: assumes 1 or 2 dims */
 		new_chunk = chunk_get_or_create(hs, point);
 
 		if (NULL == new_chunk)

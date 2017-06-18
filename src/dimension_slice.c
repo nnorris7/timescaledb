@@ -113,6 +113,26 @@ dimension_slice_scan_by_id(int32 dimension_slice_id)
 	return slice;
 }
 
+static int
+cmp_slices_by_dimension_id(const void *left, const void *right)
+{
+	const DimensionSlice *left_slice = *((DimensionSlice **) left);
+	const DimensionSlice *right_slice = *((DimensionSlice **) right);
+
+	if (left_slice->fd.dimension_id == right_slice->fd.dimension_id) 
+		return 0;
+	if (left_slice->fd.dimension_id < right_slice->fd.dimension_id) 
+		return -1;
+	return 1;
+}
+
+
+static void
+hypercube_slice_sort(Hypercube *hc)
+{
+	qsort(hc->slices, hc->num_slices, sizeof(DimensionSlice *), cmp_slices_by_dimension_id);
+}
+
 Hypercube *
 hypercube_from_constraints(ChunkConstraint constraints[], int16 num_constraints)
 {
@@ -127,6 +147,7 @@ hypercube_from_constraints(ChunkConstraint constraints[], int16 num_constraints)
 	}
 
 	Assert(hc->num_slices == hc->num_dimensions);
+	hypercube_slice_sort(hc);
 	return hc;
 }
 
