@@ -16,6 +16,7 @@ hypertable_from_tuple(HeapTuple tuple)
 	memcpy(&h->fd, GETSTRUCT(tuple), sizeof(FormData_hypertable));
 	namespace_oid = get_namespace_oid(NameStr(h->fd.schema_name), false);
 	h->main_table_relid = get_relname_relid(NameStr(h->fd.table_name), namespace_oid);
+    h->space = dimension_scan(h->fd.id, h->main_table_relid);
 
 	return h;
 }
@@ -26,6 +27,7 @@ hypertable_get_open_dimension(Hypertable *h)
 	if (h->space->num_open_dimensions == 0)
 		return NULL;	
 
+	Assert(h->space->num_open_dimensions == 1);
 	return h->space->open_dimensions[0];
 }
 
@@ -34,6 +36,7 @@ hypertable_get_closed_dimension(Hypertable *h)
 {
 	if (h->space->num_closed_dimensions == 0)
 		return NULL;
-	
+    
+	Assert(h->space->num_closed_dimensions == 1);
 	return h->space->closed_dimensions[0];
 }
