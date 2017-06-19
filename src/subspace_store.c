@@ -6,14 +6,14 @@
 
 typedef struct SubspaceStore {
   int16 num_dimensions;
-  DimensionAxis *origin; //origin of the tree
+  DimensionVec *origin; //origin of the tree
 } SubspaceStore;
 
-static DimensionAxis *
+static DimensionVec *
 subspace_store_dimension_create() 
 {
-	/* TODO remove type from axis */
-	return dimension_axis_create(DIMENSION_TYPE_OPEN, 10);
+	/* TODO remove type from vec */
+	return dimension_vec_create(10);
 }
 
 SubspaceStore *
@@ -29,13 +29,13 @@ subspace_store_init(int16 num_dimensions)
 static void 
 subspace_store_free_internal_node(void * node) 
 {
-	dimension_axis_free((DimensionAxis *)node);
+	dimension_vec_free((DimensionVec *)node);
 }
 
 void subspace_store_add(SubspaceStore *cache, Hypercube *hc,
 								   void *end_store, void (*end_store_free)(void *))
 {
-	DimensionAxis *axis = cache->origin;
+	DimensionVec *vec = cache->origin;
 	DimensionSlice *last = NULL;
 	int i;
 	
@@ -48,27 +48,27 @@ void subspace_store_add(SubspaceStore *cache, Hypercube *hc,
 
 		Assert(target->storage == NULL);
 
-		if (axis == NULL)
+		if (vec == NULL)
 		{
 			last->storage = subspace_store_dimension_create();
 			last->storage_free = subspace_store_free_internal_node;
-			axis = last->storage;
+			vec = last->storage;
 		}
-		if(axis->num_slices > 0) 
+		if(vec->num_slices > 0) 
 		{
-			Assert(axis->slices[0]->fd.dimension_id = target->fd.dimension_id);
+			Assert(vec->slices[0]->fd.dimension_id = target->fd.dimension_id);
 		}
 		
-		match = dimension_axis_find_slice(axis, target->fd.range_start);
+		match = dimension_vec_find_slice(vec, target->fd.range_start);
 		
 		if (match == NULL) 
 		{
-			dimension_axis_add_slice_sort(&axis, target);
+			dimension_vec_add_slice_sort(&vec, target);
 			match = target;
 		}
 
 		last = match;
-		axis = last->storage; /* Internal nodes point to the next Dimension's Axis */ 
+		vec = last->storage; /* Internal nodes point to the next Dimension's Vec */ 
 	}
 
 	Assert(last->storage == NULL);
@@ -80,19 +80,19 @@ void *
 subspace_store_get(SubspaceStore *cache, Point *target)
 {
 	int16 i;
-	DimensionAxis *axis = cache->origin;
+	DimensionVec *vec = cache->origin;
 	DimensionSlice *match = NULL;
 	
 	Assert(target->cardinality == cache->num_dimensions);
 
 	for (i = 0; i < target->cardinality; i++)
 	{
-		match = dimension_axis_find_slice(axis, target->coordinates[i]);
+		match = dimension_vec_find_slice(vec, target->coordinates[i]);
 
 		if (NULL == match) 
 			return NULL;
 
-		axis = match->storage;
+		vec = match->storage;
 	}
 	return match->storage;
 }
@@ -101,13 +101,13 @@ static bool
 subspace_store_match_first(SubspaceStore *cache, Point *target)
 {
 	Assert(target->cardinality == cache->num_dimensions);
-	return (dimension_axis_find_slice(cache->origin, target->coordinates[0]) != NULL);
+	return (dimension_vec_find_slice(cache->origin, target->coordinates[0]) != NULL);
 }
 
 void
 subspace_store_free(SubspaceStore *cache)
 {
-	dimension_axis_free(cache->origin);
+	dimension_vec_free(cache->origin);
 	pfree(cache);
 }
 

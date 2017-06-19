@@ -41,7 +41,7 @@ chunk_constraint_tuple_found(TupleInfo *ti, void *data)
 
 	if (ctx->num_constraints_found == ctx->chunk->num_constraints)
 		return false;
-	
+
 	return true;
 }
 
@@ -66,7 +66,7 @@ chunk_constraint_scan(Chunk *chunk)
 		.lockmode = AccessShareLock,
 		.scandirection = ForwardScanDirection,
 	};
-	
+
 	ScanKeyInit(&scankey[0], Anum_chunk_constraint_chunk_id_dimension_id_idx_chunk_id,
 				BTEqualStrategyNumber, F_INT4EQ, Int32GetDatum(chunk->fd.id));
 
