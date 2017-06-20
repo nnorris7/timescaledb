@@ -35,19 +35,7 @@ chunk_create_new(Hyperspace *hs, Point *p)
 {
 	Chunk *chunk;
 
-	/* NOTE: Currently supports only two dimensions */
-	Assert(hs->num_open_dimensions == 1 && hs->num_closed_dimensions <= 1);
-
-	if (hs->num_closed_dimensions == 1)
-		chunk = spi_chunk_create(hs->dimensions[0].fd.id,
-								 p->coordinates[0],
-								 hs->dimensions[1].fd.id,
-								 p->coordinates[1],
-								 HYPERSPACE_NUM_DIMENSIONS(hs));
-	else
-		chunk = spi_chunk_create(hs->dimensions[0].fd.id,
-								 p->coordinates[0], 0, 0,
-								 HYPERSPACE_NUM_DIMENSIONS(hs));
+	chunk = spi_chunk_create(hs, p);
 	Assert(chunk != NULL);
 
 	chunk_constraint_scan_by_chunk_id(chunk);
@@ -61,19 +49,7 @@ chunk_get_or_create_new(Hyperspace *hs, Point *p)
 {
 	Chunk *chunk;
 
-	/* NOTE: Currently supports only two dimensions */
-	Assert(hs->num_open_dimensions == 1 && hs->num_closed_dimensions <= 1);
-
-	if (hs->num_closed_dimensions == 1)
-		chunk = spi_chunk_get_or_create(hs->dimensions[0].fd.id,
-										p->coordinates[0],
-										hs->dimensions[1].fd.id,
-										p->coordinates[1],
-										HYPERSPACE_NUM_DIMENSIONS(hs));
-	else
-		chunk = spi_chunk_get_or_create(hs->dimensions[0].fd.id,
-										p->coordinates[0], 0, 0,
-										HYPERSPACE_NUM_DIMENSIONS(hs));
+	chunk = spi_chunk_get_or_create(hs, p);
 	Assert(chunk != NULL);
 
 	chunk_constraint_scan_by_chunk_id(chunk);
