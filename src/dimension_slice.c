@@ -63,8 +63,6 @@ dimension_vec_tuple_found(TupleInfo *ti, void *data)
 {
 	DimensionVec **vecptr = data;
 	DimensionSlice *slice = dimension_slice_from_tuple(ti->tuple);
-	elog(NOTICE, "Found dimension slice [" INT64_FORMAT ", " INT64_FORMAT ")",
-		 slice->fd.range_start, slice->fd.range_end);
 	dimension_vec_add_slice(vecptr, slice);
 	return true;
 }
