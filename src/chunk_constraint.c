@@ -46,8 +46,14 @@ chunk_constraint_tuple_found(TupleInfo *ti, void *data)
 	return true;
 }
 
+/* 
+ * Scan all the chunk's constraints based on the chunk ID.
+ *
+ * Memory for the constraints is already allocated in the chunk, so this simply
+ * fills in the data in the chunk's constraints array.
+ */
 Chunk *
-chunk_constraint_scan(Chunk *chunk)
+chunk_constraint_scan_by_chunk_id(Chunk *chunk)
 {
 	Catalog    *catalog = catalog_get();
 	ScanKeyData scankey[1];
@@ -83,7 +89,7 @@ chunk_constraint_scan(Chunk *chunk)
 static bool
 chunk_constraint_dimension_id_tuple_found(TupleInfo *ti, void *data)
 {
-	ChunkScanState *ctx = data;
+	ChunkScanCtx *ctx = data;
 	ChunkConstraint constraint;
 	Chunk *chunk;
 	ChunkScanEntry *entry;
@@ -91,13 +97,11 @@ chunk_constraint_dimension_id_tuple_found(TupleInfo *ti, void *data)
 
 	chunk_constraint_fill(&constraint, ti->tuple);
 
-	elog(NOTICE, "Finding chunk %d", constraint.fd.chunk_id);
-	
 	entry = hash_search(ctx->htab, &constraint.fd.chunk_id, HASH_ENTER, &found);
 	
 	if (!found)
 	{
-		chunk = MemoryContextAlloc(ctx->elm_mctx, CHUNK_SIZE(ctx->num_dimensions));
+		chunk = palloc(CHUNK_SIZE(ctx->num_dimensions));
 		chunk->fd.id = constraint.fd.chunk_id;
 		chunk->num_constraint_slots = ctx->num_dimensions;
 		entry->chunk = chunk;
@@ -106,15 +110,12 @@ chunk_constraint_dimension_id_tuple_found(TupleInfo *ti, void *data)
 	}
 
 	chunk_add_constraint(chunk, &constraint);
-	elog(NOTICE, "Added constraint (%d,%d) for chunk %d num_constraints=%d",
-		 constraint.fd.chunk_id, constraint.fd.dimension_slice_id, chunk->fd.id,
-		 chunk->num_constraints);
 
 	return true;
 }
 
 int
-chunk_constraint_scan_by_dimension_slice(DimensionSlice *slice, ChunkScanState *ctx)
+chunk_constraint_scan_by_dimension_slice_id(DimensionSlice *slice, ChunkScanCtx *ctx)
 {
 	Catalog    *catalog = catalog_get();
 	ScanKeyData scankey[1];

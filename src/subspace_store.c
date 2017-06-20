@@ -5,12 +5,12 @@
 #include "subspace_store.h"
 
 typedef struct SubspaceStore {
+	MemoryContext mcxt;	
 	int16 num_dimensions;
 	DimensionVec *origin; /* origin of the tree */
-	MemoryContext mcxt;
 } SubspaceStore;
 
-static DimensionVec *
+static inline DimensionVec *
 subspace_store_dimension_create() 
 {
 	return dimension_vec_create(10);
@@ -28,7 +28,7 @@ subspace_store_init(int16 num_dimensions, MemoryContext mcxt)
 	return sst;
 }
 
-static void 
+static inline void 
 subspace_store_free_internal_node(void * node) 
 {
 	dimension_vec_free((DimensionVec *)node);
@@ -37,10 +37,10 @@ subspace_store_free_internal_node(void * node)
 void subspace_store_add(SubspaceStore *cache, const Hypercube *hc,
 						void *end_store, void (*end_store_free)(void *))
 {
-	DimensionVec *vec = cache->origin;
+	DimensionVec **vecptr = &cache->origin;
 	DimensionSlice *last = NULL;
-	int i;
 	MemoryContext old = MemoryContextSwitchTo(cache->mcxt);
+	int i;
 	
 	Assert(hc->num_slices == cache->num_dimensions);
 
@@ -48,7 +48,8 @@ void subspace_store_add(SubspaceStore *cache, const Hypercube *hc,
 	{
 		const DimensionSlice *target = hc->slices[i];
 		DimensionSlice *match;
-
+		DimensionVec *vec = *vecptr;
+		
 		Assert(target->storage == NULL);
 
 		if (vec == NULL)
@@ -68,12 +69,12 @@ void subspace_store_add(SubspaceStore *cache, const Hypercube *hc,
 		if (match == NULL) 
 		{
 			DimensionSlice *copy = dimension_slice_copy(target);
-			dimension_vec_add_slice_sort(&vec, copy);
+			dimension_vec_add_slice_sort(vecptr, copy);
 			match = copy;
 		}
 
 		last = match;
-		vec = last->storage; /* internal nodes point to the next dimension's vector */ 
+		vecptr = (DimensionVec **)&last->storage; /* internal nodes point to the next dimension's vector */ 
 	}
 
 	Assert(last->storage == NULL);
@@ -101,13 +102,6 @@ subspace_store_get(SubspaceStore *cache, Point *target)
 		vec = match->storage;
 	}
 	return match->storage;
-}
-
-static bool
-subspace_store_match_first(SubspaceStore *cache, Point *target)
-{
-	Assert(target->cardinality == cache->num_dimensions);
-	return dimension_vec_find_slice(cache->origin, target->coordinates[0]) != NULL;
 }
 
 void

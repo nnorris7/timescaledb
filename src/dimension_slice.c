@@ -32,7 +32,7 @@ static inline Hypercube *
 hypercube_alloc(int16 num_dimensions)
 {
 	Hypercube *hc = palloc0(HYPERCUBE_SIZE(num_dimensions));
-	hc->num_dimensions = num_dimensions;
+	hc->capacity = num_dimensions;
 	return hc;
 }
 
@@ -45,6 +45,17 @@ hypercube_free(Hypercube *hc)
 		pfree(hc->slices[i]);
 
 	pfree(hc);
+}
+
+Hypercube *
+hypercube_copy(Hypercube *hc)
+{
+	Hypercube *copy;
+	size_t nbytes = HYPERCUBE_SIZE(hc->capacity);
+
+	copy = palloc(nbytes);
+	memcpy(copy, hc, nbytes);
+	return copy;
 }
 
 static bool
@@ -75,9 +86,6 @@ dimension_slice_scan(int32 dimension_id, int64 coordinate)
 		.lockmode = AccessShareLock,
 		.scandirection = ForwardScanDirection,
 	};
-
-	elog(NOTICE, "Scanning dimension %d for coordinate " INT64_FORMAT "",
-		 dimension_id, coordinate);
 
 	/* Perform an index scan for slice matching the dimension's ID and which
 	 * encloses the coordinate */
@@ -217,17 +225,17 @@ cmp_coordinate_and_slice(const void *left, const void *right)
 }
 
 static DimensionVec *
-dimension_vec_expand(DimensionVec *vec, int32 new_size)
+dimension_vec_expand(DimensionVec *vec, int32 new_capacity)
 {
-	if (vec != NULL && vec->num_slots >= new_size)
+	if (vec != NULL && vec->capacity >= new_capacity)
 		return vec;
 
 	if (NULL == vec)
-		vec = palloc(DIMENSION_VEC_SIZE(new_size));
+		vec = palloc(DIMENSION_VEC_SIZE(new_capacity));
 	else
-		vec = repalloc(vec, DIMENSION_VEC_SIZE(new_size));
+		vec = repalloc(vec, DIMENSION_VEC_SIZE(new_capacity));
 
-	vec->num_slots = new_size;
+	vec->capacity = new_capacity;
 
 	return vec;
 }
@@ -236,7 +244,7 @@ DimensionVec *
 dimension_vec_create(int32 initial_num_slices)
 {
 	DimensionVec *vec = dimension_vec_expand(NULL, initial_num_slices);
-	vec->num_slots = initial_num_slices;
+	vec->capacity = initial_num_slices;
 	vec->num_slices = 0;
 	return vec;
 }
@@ -246,8 +254,8 @@ dimension_vec_add_slice(DimensionVec **vecptr, DimensionSlice *slice)
 {
 	DimensionVec *vec = *vecptr;
 
-	if (vec->num_slices + 1 > vec->num_slots)
-		*vecptr = vec = dimension_vec_expand(vec, vec->num_slots + 10);
+	if (vec->num_slices + 1 > vec->capacity)
+		*vecptr = vec = dimension_vec_expand(vec, vec->capacity + 10);
 
 	vec->slices[vec->num_slices++] = slice;
 

@@ -40,15 +40,23 @@ typedef struct Chunk
 #define CHUNK_SIZE(num_constraints)								\
 	(sizeof(Chunk) + sizeof(ChunkConstraint) * (num_constraints))
 
-typedef struct ChunkScanState
+/*
+ * ChunkScanCtx is used to scan for a chunk matching a specific point in a
+ * hypertable's N-dimensional hyperspace.
+ *
+ * For every matching constraint, a corresponding chunk will be created in the
+ * context's hash table, keyed on the chunk ID. At the end of the scan, there
+ * will be only one chunk in the hash table that has N number of matching
+ * constraints, and this is the chunk that encloses the point.
+ */
+typedef struct ChunkScanCtx
 {
 	HTAB *htab;
-	MemoryContext elm_mctx;
 	DimensionSlice *slice;
 	int16 num_dimensions;
-	int16 num_elements;   
-} ChunkScanState;
+} ChunkScanCtx;
 
+/* The hash table entry for the ChunkScanCtx */
 typedef struct ChunkScanEntry
 {
 	int32 chunk_id;
@@ -61,5 +69,6 @@ extern Chunk *chunk_get_or_create_new(Hyperspace *hs, Point *p);
 extern bool chunk_add_constraint(Chunk *chunk, ChunkConstraint *constraint);
 extern bool chunk_add_constraint_from_tuple(Chunk *chunk, HeapTuple constraint_tuple);
 extern Chunk *chunk_find(Hyperspace *hs, Point *p);
+extern Chunk *chunk_copy(Chunk *chunk);
 
 #endif   /* TIMESCALEDB_CHUNK_H */
