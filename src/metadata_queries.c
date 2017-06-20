@@ -60,32 +60,47 @@ prepare_plan(const char *src, int nargs, Oid *argtypes)
  * The slowpath calls  get_or_create_chunk(), and is called only if the fastpath returned no rows.
  *
  */
-#define CHUNK_QUERY_ARGS (Oid[]) {INT4OID, INT8OID, INT4OID, INT8OID}
+#define INT8ARRAYOID 1016
+
+#define CHUNK_QUERY_ARGS (Oid[]) {INT4ARRAYOID, INT8ARRAYOID}
 #define CHUNK_QUERY "SELECT * \
-				FROM _timescaledb_internal.chunk_get_or_create($1, $2, $3, $4)"
+				FROM _timescaledb_internal.chunk_get_or_create($1, $2)"
 
 /* plan for getting a chunk via get_or_create_chunk(). */
 DEFINE_PLAN(get_chunk_plan, CHUNK_QUERY, 4, CHUNK_QUERY_ARGS)
 
-
-#define CHUNK_CREATE_ARGS (Oid[]) {INT4OID, INT8OID, INT4OID, INT8OID}
+#define CHUNK_CREATE_ARGS (Oid[]) {INT4ARRAYOID, INT8ARRAYOID} /* 1016 is int 8 array */
 #define CHUNK_CREATE "SELECT * \
-				FROM _timescaledb_internal.chunk_create($1, $2, $3, $4)"
+				FROM _timescaledb_internal.chunk_create($1, $2)"
 
 /* plan for creating a chunk via create_chunk(). */
-DEFINE_PLAN(create_chunk_plan, CHUNK_CREATE, 4, CHUNK_CREATE_ARGS)
+DEFINE_PLAN(create_chunk_plan, CHUNK_CREATE, 2, CHUNK_CREATE_ARGS)
 
 static HeapTuple
 chunk_tuple_create_spi_connected(int32 time_dimension_id, int64 time_value,
 								int32 space_dimension_id, int64 space_value,
 								TupleDesc *desc, SPIPlanPtr plan)
 {
-	/* the fastpath was n/a or returned 0 rows. */
 	int			ret;
-	Datum		args[4] = {
-		Int32GetDatum(time_dimension_id), Int64GetDatum(time_value),
-		Int32GetDatum(space_dimension_id), Int64GetDatum(space_value)
+	Datum		dimension_ids[2] = {
+		Int32GetDatum(time_dimension_id), Int32GetDatum(space_dimension_id),
 	};
+
+	Datum		dimension_values[2] = {
+		Int64GetDatum(time_value), Int64GetDatum(space_value)
+	};
+
+	int num_dimensions = 2;
+	if (space_dimension_id == 0) {
+		num_dimensions = 1;
+	}
+
+
+	Datum		args[2] = {
+         PointerGetDatum(construct_array(dimension_ids, num_dimensions, INT4OID, 4, true, 'i')), 
+         PointerGetDatum(construct_array(dimension_values, num_dimensions, INT8OID, 8, true, 'd')), 
+	};
+
 	HeapTuple	tuple;
 
 	ret = SPI_execute_plan(plan, args, NULL, false, 4);

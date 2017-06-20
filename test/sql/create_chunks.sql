@@ -31,5 +31,5 @@ SELECT * FROM _timescaledb_catalog.chunk c
     LEFT JOIN _timescaledb_catalog.dimension d ON (d.id = ds.dimension_id)
     LEFT JOIN _timescaledb_catalog.hypertable h ON (d.hypertable_id = h.id)
     WHERE h.schema_name = 'public' AND h.table_name = 'chunk_test'
-    ORDER BY c.id;
+    ORDER BY c.id, d.id;
 
