@@ -80,11 +80,11 @@ BEGIN
         range_start := (dimension_value / dimension_row.interval_length) * dimension_row.interval_length;
         range_end := range_start + dimension_row.interval_length;
     ELSE
-       inter := (65535 / dimension_row.num_slices);
+       inter := (2147483647 / dimension_row.num_slices);
        IF dimension_value >= inter * (dimension_row.num_slices - 1) THEN
           --put overflow from integer-division errors in last range
           range_start = inter * (dimension_row.num_slices - 1);
-          range_end = 65535;
+          range_end = 2147483647;
        ELSE
           range_start = (dimension_value / inter) * inter;
           range_end := range_start + inter;

@@ -87,6 +87,8 @@ chunk_tuple_found(TupleInfo *ti, void *arg)
 {
 	Chunk *chunk = arg;
 	memcpy(&chunk->fd, GETSTRUCT(ti->tuple), sizeof(FormData_chunk));
+	chunk->table_id = get_relname_relid(chunk->fd.table_name.data,
+										get_namespace_oid(chunk->fd.schema_name.data, false));
 	return false;
 }
 

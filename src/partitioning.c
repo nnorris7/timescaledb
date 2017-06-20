@@ -397,17 +397,15 @@ Datum
 get_partition_for_key(PG_FUNCTION_ARGS)
 {
 	struct varlena *data;
-	int32		mod;
 	uint32		hash_u;
 	int32		res;
 
 	data = PG_GETARG_VARLENA_PP(0);
-	mod = 65535;
 
 	hash_u = hash_any((unsigned char *) VARDATA_ANY(data),
 					  VARSIZE_ANY_EXHDR(data));
 
-	res = (int32) ((hash_u & 0x7fffffff) % mod);
+	res = (int32) (hash_u & 0x7fffffff); /* Only positive numbers */
 
 	PG_FREE_IF_COPY(data, 0);
 	PG_RETURN_INT32(res);
