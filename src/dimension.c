@@ -56,7 +56,7 @@ dimension_tuple_found(TupleInfo *ti, void *data)
 		d = &hs->dimensions[hs->num_open_dimensions++];
 	else
 		d = &hs->dimensions[hs->capacity - 1 - hs->num_closed_dimensions++];
-	
+
 	dimension_fill_in_from_tuple(d, ti->tuple, hs->main_table_relid);
 
 	return true;
@@ -137,7 +137,7 @@ hyperspace_calculate_point(Hyperspace *hs, HeapTuple tuple, TupleDesc tupdesc)
 			p->coordinates[p->num_open++] = time_value_to_internal(datum, d->fd.column_type);
 		}
 		else
-		{	   	
+		{
 			p->coordinates[p->num_open + p->num_closed++] =
 				partitioning_func_apply_tuple(d->partitioning, tuple, tupdesc);
 		}

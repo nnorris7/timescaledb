@@ -30,7 +30,7 @@ insert_statement_state_new(Oid relid)
 
 	if (NULL == ht)
 		elog(ERROR, "No hypertable for relid %d", relid);
-	
+
 	state = palloc(sizeof(InsertStatementState));
 	state->mctx = mctx;
 	state->hypertable_cache = hypertable_cache;

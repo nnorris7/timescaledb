@@ -27,4 +27,3 @@ extern Chunk *chunk_constraint_scan_by_chunk_id(Chunk *chunk);
 extern int chunk_constraint_scan_by_dimension_slice_id(DimensionSlice *slice, ChunkScanCtx *ctx);
 
 #endif /* TIMESCALEDB_CHUNK_CONSTRAINT_H */
-

@@ -9,13 +9,12 @@
 #include "chunk_constraint.h"
 
 typedef struct Hypercube Hypercube;
-typedef struct ChunkConstraint ChunkConstraint;
 typedef struct Point Point;
 typedef struct Hyperspace Hyperspace;
 
 /*
  * A chunk represents a table that stores data, part of a partitioned
- * table. 
+ * table.
  *
  * Conceptually, a chunk is a hypercube in an N-dimensional space. The
  * boundaries of the cube is represented by a collection of slices from the N
@@ -26,13 +25,13 @@ typedef struct Chunk
 	FormData_chunk fd;
 	Oid			table_id;
 
-	/* 
+	/*
 	 * The hypercube defines the chunks position in the N-dimensional space.
 	 * Each of the N slices in the cube corresponds to a constraint on the chunk
 	 * table.
 	 */
 	Hypercube   *cube;
-	int16 num_constraint_slots;
+	int16 capacity;
 	int16 num_constraints;
 	ChunkConstraint constraints[0];
 } Chunk;
@@ -62,7 +61,7 @@ typedef struct ChunkScanEntry
 	int32 chunk_id;
 	Chunk *chunk;
 } ChunkScanEntry;
- 	
+
 extern Chunk *chunk_create_from_tuple(HeapTuple tuple, int16 num_constraints);
 extern Chunk *chunk_create_new(Hyperspace *hs, Point *p);
 extern Chunk *chunk_get_or_create_new(Hyperspace *hs, Point *p);

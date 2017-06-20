@@ -20,7 +20,7 @@ typedef struct
 	MemoryContext mctx;
 	Cache	   *hypertable_cache;
 	Hypertable *hypertable;
-	SubspaceStore *cache; 
+	SubspaceStore *cache;
 } InsertStatementState;
 
 InsertStatementState *insert_statement_state_new(Oid);

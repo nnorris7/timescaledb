@@ -17,7 +17,7 @@ static inline void
 insert_statement_state_init(InsertStatementState **state_p, Oid relid)
 {
 	if (*state_p == NULL)
-		*state_p = insert_statement_state_new(relid);	
+		*state_p = insert_statement_state_new(relid);
 }
 
 static inline void

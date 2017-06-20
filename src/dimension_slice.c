@@ -148,9 +148,9 @@ cmp_slices_by_dimension_id(const void *left, const void *right)
 	const DimensionSlice *left_slice = *((DimensionSlice **) left);
 	const DimensionSlice *right_slice = *((DimensionSlice **) right);
 
-	if (left_slice->fd.dimension_id == right_slice->fd.dimension_id) 
+	if (left_slice->fd.dimension_id == right_slice->fd.dimension_id)
 		return 0;
-	if (left_slice->fd.dimension_id < right_slice->fd.dimension_id) 
+	if (left_slice->fd.dimension_id < right_slice->fd.dimension_id)
 		return -1;
 	return 1;
 }

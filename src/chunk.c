@@ -22,11 +22,11 @@ chunk_create_from_tuple(HeapTuple tuple, int16 num_constraints)
 
 	chunk = palloc0(CHUNK_SIZE(num_constraints));
 	memcpy(&chunk->fd, GETSTRUCT(tuple), sizeof(FormData_chunk));
-	chunk->num_constraint_slots = num_constraints;
+	chunk->capacity = num_constraints;
 	chunk->num_constraints = 0;
-    chunk->table_id = get_relname_relid(chunk->fd.table_name.data,
+	chunk->table_id = get_relname_relid(chunk->fd.table_name.data,
 										get_namespace_oid(chunk->fd.schema_name.data, false));
-	
+
 	return chunk;
 }
 
@@ -34,11 +34,11 @@ Chunk *
 chunk_create_new(Hyperspace *hs, Point *p)
 {
 	Chunk *chunk;
-	
-	/* NOTE: Currently supports only two dimensions */
-	Assert(hs->num_open_dimensions == 1 && hs->num_closed_dimensions <= 1);	
 
-	if (hs->num_closed_dimensions == 1) 
+	/* NOTE: Currently supports only two dimensions */
+	Assert(hs->num_open_dimensions == 1 && hs->num_closed_dimensions <= 1);
+
+	if (hs->num_closed_dimensions == 1)
 		chunk = spi_chunk_create(hs->dimensions[0].fd.id,
 								 p->coordinates[0],
 								 hs->dimensions[1].fd.id,
@@ -49,10 +49,10 @@ chunk_create_new(Hyperspace *hs, Point *p)
 								 p->coordinates[0], 0, 0,
 								 HYPERSPACE_NUM_DIMENSIONS(hs));
 	Assert(chunk != NULL);
-	
+
 	chunk_constraint_scan_by_chunk_id(chunk);
 	chunk->cube = hypercube_from_constraints(chunk->constraints, chunk->num_constraints);
-	
+
 	return chunk;
 }
 
@@ -60,11 +60,11 @@ Chunk *
 chunk_get_or_create_new(Hyperspace *hs, Point *p)
 {
 	Chunk *chunk;
-	
-	/* NOTE: Currently supports only two dimensions */
-	Assert(hs->num_open_dimensions == 1 && hs->num_closed_dimensions <= 1);	
 
-	if (hs->num_closed_dimensions == 1) 
+	/* NOTE: Currently supports only two dimensions */
+	Assert(hs->num_open_dimensions == 1 && hs->num_closed_dimensions <= 1);
+
+	if (hs->num_closed_dimensions == 1)
 		chunk = spi_chunk_get_or_create(hs->dimensions[0].fd.id,
 										p->coordinates[0],
 										hs->dimensions[1].fd.id,
@@ -75,7 +75,7 @@ chunk_get_or_create_new(Hyperspace *hs, Point *p)
 										p->coordinates[0], 0, 0,
 										HYPERSPACE_NUM_DIMENSIONS(hs));
 	Assert(chunk != NULL);
-	
+
 	chunk_constraint_scan_by_chunk_id(chunk);
 	chunk->cube = hypercube_from_constraints(chunk->constraints, chunk->num_constraints);
 
@@ -86,7 +86,7 @@ static bool
 chunk_tuple_found(TupleInfo *ti, void *arg)
 {
 	Chunk *chunk = arg;
-	memcpy(&chunk->fd, GETSTRUCT(ti->tuple), sizeof(FormData_chunk));   
+	memcpy(&chunk->fd, GETSTRUCT(ti->tuple), sizeof(FormData_chunk));
 	return false;
 }
 
@@ -131,9 +131,9 @@ chunk_scan(Chunk *chunk_stub, bool tuplock)
 bool
 chunk_add_constraint(Chunk *chunk, ChunkConstraint *constraint)
 {
-	if (chunk->num_constraint_slots == chunk->num_constraints)
+	if (chunk->capacity == chunk->num_constraints)
 		return false;
-	
+
 	memcpy(&chunk->constraints[chunk->num_constraints++], constraint, sizeof(ChunkConstraint));
 	return true;
 }
@@ -141,7 +141,7 @@ chunk_add_constraint(Chunk *chunk, ChunkConstraint *constraint)
 bool
 chunk_add_constraint_from_tuple(Chunk *chunk, HeapTuple constraint_tuple)
 {
-	if (chunk->num_constraint_slots == chunk->num_constraints)
+	if (chunk->capacity == chunk->num_constraints)
 		return false;
 
 	memcpy(&chunk->constraints[chunk->num_constraints++],
@@ -170,10 +170,10 @@ chunk_scan_ctx_destroy(ChunkScanCtx *ctx)
 
 static Chunk *
 chunk_scan_ctx_find_chunk(ChunkScanCtx *ctx)
-{   
+{
 	HASH_SEQ_STATUS status;
 	ChunkScanEntry *entry;
-	
+
 	hash_seq_init(&status, ctx->htab);
 
 	for (entry = hash_seq_search(&status);
@@ -196,7 +196,7 @@ chunk_scan_ctx_find_chunk(ChunkScanCtx *ctx)
  * Find a chunk matching a point in a hypertable's N-dimensional hyperspace.
  *
  * This involves:
- * 
+ *
  * 1) For each dimension:
  *    - Find all dimension slices that match the dimension
  * 2) For each dimension slice:
@@ -230,7 +230,7 @@ chunk_find(Hyperspace *hs, Point *p)
 		DimensionVec *vec;
 
 		vec = dimension_slice_scan(hs->dimensions[i].fd.id, p->coordinates[i]);
-		
+
 		for (j = 0; j < vec->num_slices; j++)
 			/* For each dimension slice, find matching constraints. These will
 			 * be saved in the scan context */
@@ -248,7 +248,7 @@ chunk_find(Hyperspace *hs, Point *p)
 		/* Fill in the rest of the chunk's data from the chunk table */
 		chunk_scan(chunk, false);
 	}
-	
+
 	return chunk;
 }
 
@@ -256,7 +256,7 @@ Chunk *
 chunk_copy(Chunk *chunk)
 {
 	Chunk *copy;
-	size_t nbytes = CHUNK_SIZE(chunk->num_constraint_slots);
+	size_t nbytes = CHUNK_SIZE(chunk->capacity);
 
 	copy = palloc(nbytes);
 	memcpy(copy, chunk, nbytes);
